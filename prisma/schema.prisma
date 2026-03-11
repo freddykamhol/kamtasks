@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Quadrant {
+  DO
+  SCHEDULE
+  DELEGATE
+  ELIMINATE
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  tasks     Task[]
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Task {
+  id         String     @id @default(cuid())
+  title      String
+  quadrant   Quadrant
+  status     TaskStatus @default(OPEN)
+  estimatedMinutes Int?
+  deadlineAt DateTime?
+  ownerId    String?
+  owner      User?      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  eventId    String?
+  event      Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  ganttStart DateTime?
+  ganttEnd   DateTime?
+  ganttLane  String?
+  sortOrder  Int        @default(0)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  title     String
+  startAt   DateTime
+  endAt     DateTime
+  durationMinutes Int?
+  travelMinutes Int?
+  travelSourceLabel String?
+  location  String?
+  invites   String?
+  notes     String?
+  ownerId   String?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  calendarSourceId String?
+  externalUid String?
+  calendarSource CalendarSource? @relation(fields: [calendarSourceId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([calendarSourceId, externalUid])
+}
+
+model CalendarSource {
+  id           String   @id @default(cuid())
+  name         String
+  url          String
+  color        String   @default("#7dd3fc")
+  lastSyncedAt DateTime?
+  lastSyncStatus String?
+  events       Event[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
