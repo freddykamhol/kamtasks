@@ -1,5 +1,11 @@
 KAMTasks ist ein funktionales Task-Tool auf Basis von Next.js, Prisma und SQLite.
 
+## Node-Version
+
+Das Projekt ist auf `Node 20` ausgelegt.
+
+Für Hosts mit `nodenv` liegt deshalb eine `.node-version` im Projekt. Dadurch wird in diesem Ordner automatisch Node 20 gewählt, auch für `npm install`-Skripte wie Prisma.
+
 ## Setup
 
 1. Prisma Client generieren:
