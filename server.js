@@ -1,11 +1,15 @@
 async function bootstrap() {
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = "production";
+  }
+
   const http = await import("node:http");
   const { parse } = await import("node:url");
   const nextModule = await import("next");
 
   const next = nextModule.default;
-  const dev = process.env.NODE_ENV !== "production";
-  const hostname = process.env.HOSTNAME || "0.0.0.0";
+  const dev = process.env.NODE_ENV === "development";
+  const hostname = process.env.HOST || "0.0.0.0";
   const port = Number.parseInt(process.env.PORT || "3000", 10);
 
   const app = next({ dev, hostname, port });

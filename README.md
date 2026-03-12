@@ -51,6 +51,8 @@ Start auf dem Server:
 npm run start
 ```
 
+`npm run start` richtet die SQLite-Tabellen automatisch vor dem Serverstart ein.
+
 Alternativ direkt:
 
 ```bash
@@ -59,7 +61,7 @@ node server.js
 
 Der Server nutzt standardmäßig:
 
-- `HOSTNAME=0.0.0.0`
+- `HOST=0.0.0.0`
 - `PORT=3000`
 
 Beides kann über Umgebungsvariablen auf dem Webspace überschrieben werden.

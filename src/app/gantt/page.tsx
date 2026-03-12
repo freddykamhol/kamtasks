@@ -2,6 +2,8 @@ import { ensureSeedData } from "@/lib/bootstrap";
 import { prisma } from "@/lib/prisma";
 import { GanttTool } from "./tool";
 
+export const dynamic = "force-dynamic";
+
 export default async function GanttPage() {
   await ensureSeedData();
 

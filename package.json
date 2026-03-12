@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm run db:generate && next dev",
     "build": "npm run db:generate && next build --webpack",
-    "start": "node server.js",
+    "start": "npm run db:setup && node server.js",
     "postinstall": "npm run db:generate",
     "lint": "eslint",
     "db:generate": "prisma generate",
