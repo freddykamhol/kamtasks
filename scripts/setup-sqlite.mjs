@@ -1,11 +1,11 @@
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import Database from "better-sqlite3";
 
 const dbPath = resolve(process.cwd(), "prisma/dev.db");
 mkdirSync(dirname(dbPath), { recursive: true });
 
-const db = new DatabaseSync(dbPath);
+const db = new Database(dbPath);
 
 db.exec(`
   PRAGMA foreign_keys = ON;
