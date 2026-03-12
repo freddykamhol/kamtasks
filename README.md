@@ -20,6 +20,8 @@ npm run db:setup
 npm run dev
 ```
 
+`npm ci` erzeugt den Prisma-Client zusätzlich automatisch über `postinstall`, damit Deployments ohne manuelles `prisma generate` bauen.
+
 ## Datenmodell
 
 - `User`: Verantwortliche Personen
@@ -39,7 +41,6 @@ Das Projekt ist für ein schlichtes Deployment ohne zusätzliche Cloud-Dienste a
 Vor dem Upload:
 
 ```bash
-npm run db:generate
 npm run db:setup
 npm run build
 ```

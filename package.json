@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "npm run db:generate && next dev",
-    "build": "next build --webpack",
+    "build": "npm run db:generate && next build --webpack",
     "start": "node server.js",
+    "postinstall": "npm run db:generate",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
