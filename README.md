@@ -43,3 +43,22 @@ npm run db:generate
 npm run db:setup
 npm run build
 ```
+
+Start auf dem Server:
+
+```bash
+npm run start
+```
+
+Alternativ direkt:
+
+```bash
+node server.js
+```
+
+Der Server nutzt standardmäßig:
+
+- `HOSTNAME=0.0.0.0`
+- `PORT=3000`
+
+Beides kann über Umgebungsvariablen auf dem Webspace überschrieben werden.
