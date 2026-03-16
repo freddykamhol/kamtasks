@@ -399,7 +399,7 @@ export function GanttTool({ tasks }: Props) {
         />
 
         <div className="grid gap-4">
-          <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
+          <section className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:rounded-[30px] sm:p-5 md:p-6">
               <div className="flex flex-col gap-4 border-b border-white/8 pb-4 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Steuerung</p>
@@ -413,7 +413,7 @@ export function GanttTool({ tasks }: Props) {
                     <span>Raster: 15 Minuten</span>
                   </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-[220px_200px_minmax(0,1fr)] xl:min-w-[620px]">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[220px_200px_minmax(0,1fr)] xl:min-w-[620px]">
                   <input
                     type="date"
                     value={planningDate}
@@ -428,7 +428,7 @@ export function GanttTool({ tasks }: Props) {
                   >
                     Tagesplan erzeugen
                   </button>
-                  <div className="relative">
+                  <div className="relative sm:col-span-2 lg:col-span-1">
                     <button
                       type="button"
                       onClick={() => setIsExportOpen((current) => !current)}
@@ -439,7 +439,7 @@ export function GanttTool({ tasks }: Props) {
                     </button>
 
                     {isExportOpen ? (
-                      <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 min-w-[180px] overflow-hidden rounded-xl border border-white/10 bg-[#10192c] shadow-[0_18px_60px_rgba(0,0,0,0.4)]">
+                      <div className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/10 bg-[#10192c] shadow-[0_18px_60px_rgba(0,0,0,0.4)] sm:left-auto sm:right-0 sm:min-w-[180px]">
                         {["PDF-Datei", "Excel", "JPEG"].map((label) => (
                           <button
                             key={label}
@@ -701,7 +701,7 @@ export function GanttTool({ tasks }: Props) {
               </div>
             </section>
 
-            <section className="rounded-[30px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
+            <section className="rounded-[26px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:rounded-[30px] sm:p-5 md:p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">

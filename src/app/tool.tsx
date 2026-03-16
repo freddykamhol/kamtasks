@@ -280,7 +280,7 @@ export function EisenhowerTool({
           />
 
           <div className="grid gap-4">
-            <div className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:p-5 md:p-6">
+            <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:rounded-[30px] sm:p-5 md:p-6">
               <div className="border-b border-white/8 pb-4 sm:pb-5">
                 <p className="text-xs uppercase tracking-[0.35em] text-slate-500 sm:text-sm">
                   Aufgaben anlegen
@@ -296,13 +296,13 @@ export function EisenhowerTool({
                   </select>
                 </div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[220px_220px_220px_180px]">
-                  <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 max-[380px]:flex-col max-[380px]:items-start">
                     <input value={estimatedMinutes} onChange={(event) => setEstimatedMinutes(event.target.value)} inputMode="numeric" placeholder="30" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500" />
-                    <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
+                    <span className="shrink-0 text-sm text-slate-500 max-[380px]:ml-0">Minuten</span>
                   </div>
-                  <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 max-[380px]:flex-col max-[380px]:items-start">
                     <input type="date" value={deadlineDate} onChange={(event) => setDeadlineDate(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
-                    <span className="ml-3 shrink-0 text-sm text-slate-500">Deadline</span>
+                    <span className="shrink-0 text-sm text-slate-500 max-[380px]:ml-0">Deadline</span>
                   </div>
                   <select value={taskOwnerId} onChange={(event) => setTaskOwnerId(event.target.value)} className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40">
                     <option value="">Kein User</option>
@@ -312,16 +312,16 @@ export function EisenhowerTool({
                       </option>
                     ))}
                   </select>
-                  <button type="button" disabled={isPending} onClick={handleCreateTask} className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2 xl:col-span-1">
+                  <button type="button" disabled={isPending} onClick={handleCreateTask} className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2 xl:col-span-1">
                     Aufgabe speichern
                   </button>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[24px] border border-white/8 bg-[#09101f] p-4">
+              <div className="mt-5 rounded-[22px] border border-white/8 bg-[#09101f] p-3.5 sm:rounded-[24px] sm:p-4">
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[220px_180px_1fr] xl:items-center">
                   <input type="date" value={planningDate} onChange={(event) => setPlanningDate(event.target.value)} className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40" />
-                  <button type="button" disabled={isPending} onClick={handleGenerateDayPlan} className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-slate-200 disabled:opacity-60">
+                  <button type="button" disabled={isPending} onClick={handleGenerateDayPlan} className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-slate-200 disabled:opacity-60 md:w-auto">
                     Tagesplan erzeugen
                   </button>
                   <p className="text-sm leading-6 text-slate-400 md:col-span-2 xl:col-span-1">
@@ -330,7 +330,7 @@ export function EisenhowerTool({
                 </div>
               </div>
 
-              <section className="mt-5 rounded-[28px] border border-white/10 bg-[#09101f] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:p-5 md:p-6">
+              <section className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:rounded-[28px] sm:p-5 md:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.35em] text-slate-500 sm:text-sm">
@@ -495,7 +495,7 @@ export function EisenhowerTool({
                 </div>
               </section>
 
-              <section className="mt-5 rounded-[28px] border border-white/10 bg-[#09101f] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:p-5 md:p-6">
+              <section className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:rounded-[28px] sm:p-5 md:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.35em] text-slate-500 sm:text-sm">
@@ -565,7 +565,7 @@ export function EisenhowerTool({
                 </div>
               </section>
 
-              <section className="mt-5 rounded-[28px] border border-white/10 bg-[#09101f] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:p-5 md:p-6">
+              <section className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:rounded-[28px] sm:p-5 md:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-[0.35em] text-slate-500 sm:text-sm">
@@ -662,7 +662,7 @@ export function EisenhowerTool({
 
       {selectedEvent ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#020617]/72 p-3 backdrop-blur-sm sm:p-4 md:items-center">
-          <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.45)] sm:max-h-[calc(100vh-2rem)] sm:p-5 md:p-6">
+          <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.45)] sm:max-h-[calc(100vh-2rem)] sm:rounded-[28px] sm:p-5 md:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Termin-Details</p>

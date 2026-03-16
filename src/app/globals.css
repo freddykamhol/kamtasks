@@ -29,6 +29,13 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
 h1,
 h2,
 h3 {
@@ -38,4 +45,12 @@ h3 {
 a,
 button {
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

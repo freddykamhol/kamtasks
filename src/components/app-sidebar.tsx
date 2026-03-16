@@ -186,7 +186,7 @@ export function AppSidebar({ activeKey }: { activeKey: SidebarKey }) {
         </div>
       </aside>
 
-      <nav className="fixed inset-x-3 bottom-3 z-40 rounded-[24px] border border-white/10 bg-[rgba(8,13,25,0.92)] p-2 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-2 bottom-2 z-40 rounded-[20px] border border-white/10 bg-[rgba(8,13,25,0.92)] p-1.5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:inset-x-3 sm:bottom-3 sm:rounded-[24px] sm:p-2 lg:hidden">
         <div className="grid grid-cols-5 gap-1">
           {navigationItems.map((item, index) => {
             const Icon = icons[index];
@@ -200,12 +200,12 @@ export function AppSidebar({ activeKey }: { activeKey: SidebarKey }) {
                   active
                     ? "bg-cyan-300/14 text-cyan-100"
                     : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
-                }`}
+                } max-[380px]:rounded-[18px] max-[380px]:px-1 max-[380px]:py-1.5`}
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-2xl">
+                <span className="flex h-9 w-9 items-center justify-center rounded-2xl max-[380px]:h-8 max-[380px]:w-8">
                   <Icon />
                 </span>
-                <span className="truncate text-[10px] font-medium tracking-[0.06em]">
+                <span className="truncate text-[10px] font-medium tracking-[0.06em] max-[380px]:hidden">
                   {item.label}
                 </span>
               </Link>

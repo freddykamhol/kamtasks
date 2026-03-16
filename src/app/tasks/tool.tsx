@@ -296,7 +296,7 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
 
         <div className="grid gap-4">
             <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.2fr)_380px]">
-              <section className="min-w-0 rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
+              <section className="min-w-0 rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:rounded-[30px] sm:p-5 md:p-6">
                 <div className="flex flex-col gap-5 border-b border-white/8 pb-5">
                   <div className="min-w-0">
                     <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Neue Aufgabe</p>
@@ -330,7 +330,7 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
                 </div>
 
                 <div className="mt-3 grid gap-3 md:grid-cols-2 2xl:grid-cols-[220px_220px_minmax(0,1fr)_auto]">
-                  <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 max-[380px]:flex-col max-[380px]:items-start">
                     <input
                       value={estimatedMinutes}
                       onChange={(event) => setEstimatedMinutes(event.target.value)}
@@ -338,7 +338,7 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
                       placeholder="30"
                       className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
                     />
-                    <span className="ml-3 shrink-0 text-sm text-slate-500">Min.</span>
+                    <span className="shrink-0 text-sm text-slate-500 max-[380px]:ml-0">Min.</span>
                   </div>
                   <input
                     type="date"
@@ -369,12 +369,12 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
                 </div>
               </section>
 
-              <section className="relative min-w-0 overflow-hidden rounded-[30px] border border-amber-300/18 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_rgba(15,23,42,0.95)_44%,_rgba(4,8,15,1)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
+              <section className="relative min-w-0 overflow-hidden rounded-[26px] border border-amber-300/18 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_rgba(15,23,42,0.95)_44%,_rgba(4,8,15,1)_100%)] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:rounded-[30px] sm:p-5 md:p-6">
                 <div className="absolute inset-x-[-18%] top-[-18%] h-48 rounded-full bg-amber-300/14 blur-3xl" />
                 <div className="absolute bottom-[-18%] right-[-8%] h-52 w-52 rounded-full bg-cyan-300/10 blur-3xl" />
 
                 <div className="relative min-w-0">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 max-[380px]:items-start">
                     <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200/20 bg-amber-200/10 text-amber-100">
                       <SparkIcon />
                     </span>
@@ -392,7 +392,7 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
                     type="button"
                     disabled={isPending || isFocusRolling || openTasks.length === 0}
                     onClick={handleFocusMission}
-                    className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-amber-200/12 px-4 py-3 text-sm font-medium text-amber-50 transition hover:bg-amber-200/18 disabled:opacity-60"
+                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full border border-amber-200/25 bg-amber-200/12 px-4 py-3 text-sm font-medium text-amber-50 transition hover:bg-amber-200/18 disabled:opacity-60 sm:w-auto"
                   >
                     <SparkIcon />
                     {isFocusRolling ? "scannt Mission..." : "Mission ziehen"}
@@ -458,7 +458,7 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
                 return (
                   <section
                     key={quadrant.id}
-                    className={`min-w-0 rounded-[30px] border p-5 ${quadrant.accent} ${quadrant.glow} md:p-6`}
+                    className={`min-w-0 rounded-[26px] border p-4 ${quadrant.accent} ${quadrant.glow} sm:rounded-[30px] sm:p-5 md:p-6`}
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
@@ -576,7 +576,7 @@ export function TasksTool({ users, tasks: initialTasks }: Props) {
               })}
             </div>
 
-            <section className="min-w-0 rounded-[30px] border border-emerald-300/18 bg-[linear-gradient(180deg,_rgba(12,19,36,0.98)_0%,_rgba(8,14,27,1)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.30)] md:p-6">
+            <section className="min-w-0 rounded-[26px] border border-emerald-300/18 bg-[linear-gradient(180deg,_rgba(12,19,36,0.98)_0%,_rgba(8,14,27,1)_100%)] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.30)] sm:rounded-[30px] sm:p-5 md:p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-emerald-200/70">Erledigt</p>

@@ -72,6 +72,13 @@ const schedulingModeOptions = [
 
 const defaultDepartureOriginKey = departureOrigins[0]?.key ?? "home";
 const hourRowHeight = 68;
+const formFieldClass =
+  "min-w-0 w-full rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40";
+const formSelectClass =
+  "min-w-0 w-full rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40";
+const formPanelClass = "min-w-0 rounded-[24px] border border-white/10 bg-[#09101f] p-4";
+const formReadoutClass =
+  "min-w-0 rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-slate-400";
 
 function formatDateInput(value: Date) {
   const year = value.getFullYear();
@@ -981,11 +988,16 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
         : formatDateLabel(currentDate, { month: "long", year: "numeric" });
 
   const viewLabel = view === "day" ? "Tag" : view === "week" ? "7 Tage" : "Monat";
+  const mobileMonthDays = visibleDays.filter((day) => day.getMonth() === currentDate.getMonth());
+  const selectedCreateDepartureOrigin =
+    departureOrigins.find((origin) => origin.key === eventDepartureOriginKey) ?? departureOrigins[0];
+  const selectedEditDepartureOrigin =
+    departureOrigins.find((origin) => origin.key === editDepartureOriginKey) ?? departureOrigins[0];
 
   return (
     <>
       <WorkspaceShell activeKey="calendar">
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4">
           <WorkspaceHero
             eyebrow="Kalender"
             title={headerLabel}
@@ -999,8 +1011,8 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
             }
           />
 
-          <div className="grid gap-4">
-            <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
+          <div className="grid min-w-0 gap-4">
+            <section className="min-w-0 rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:rounded-[30px] sm:p-5 md:p-6">
               <div className="flex flex-col gap-4 border-b border-white/8 pb-5 xl:flex-row xl:items-end xl:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Ansicht</p>
@@ -1010,8 +1022,8 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                  <div className="grid grid-cols-3 rounded-2xl border border-white/10 bg-[#09101f] p-1 sm:flex">
+                <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <div className="grid w-full grid-cols-3 rounded-2xl border border-white/10 bg-[#09101f] p-1 sm:w-auto sm:flex">
                     {([
                       ["day", "Tag"],
                       ["week", "7 Tage"],
@@ -1021,7 +1033,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                         key={key}
                         type="button"
                         onClick={() => setView(key)}
-                        className={`rounded-xl px-4 py-2 text-sm transition ${
+                        className={`rounded-xl px-3 py-2 text-sm transition max-[380px]:px-2 max-[380px]:text-[13px] ${
                           view === key ? "bg-cyan-300 text-slate-950" : "text-slate-300"
                         }`}
                       >
@@ -1030,25 +1042,25 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-[#09101f] p-1 sm:flex sm:items-center sm:gap-2">
+                  <div className="grid w-full grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-[#09101f] p-1 sm:w-auto sm:flex sm:items-center sm:gap-2">
                     <button
                       type="button"
                       onClick={() => shiftRange(-1)}
-                      className="rounded-xl px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white"
+                      className="rounded-xl px-2.5 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white max-[380px]:px-2 max-[380px]:text-[13px]"
                     >
                       Zurück
                     </button>
                     <button
                       type="button"
                       onClick={() => setCurrentDate(startOfDay(new Date()))}
-                      className="rounded-xl px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white"
+                      className="rounded-xl px-2.5 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white max-[380px]:px-2 max-[380px]:text-[13px]"
                     >
                       Heute
                     </button>
                     <button
                       type="button"
                       onClick={() => shiftRange(1)}
-                      className="rounded-xl px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white"
+                      className="rounded-xl px-2.5 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white max-[380px]:px-2 max-[380px]:text-[13px]"
                     >
                       Weiter
                     </button>
@@ -1056,7 +1068,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   <button
                     type="button"
                     onClick={handleMonthExportJpeg}
-                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white transition hover:border-white/20 hover:bg-white/5"
+                    className="w-full rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white transition hover:border-white/20 hover:bg-white/5 sm:w-auto"
                   >
                     Monat als JPEG
                   </button>
@@ -1065,94 +1077,146 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
 
               {view === "month" ? (
                 <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10 bg-[#09101f]">
-                  <div className="grid grid-cols-7 border-b border-white/8 bg-[#0b1325]">
-                    {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((label) => (
-                      <div
-                        key={label}
-                        className="border-l border-white/8 px-1 py-2 text-center text-[10px] uppercase tracking-[0.16em] text-slate-500 first:border-l-0 md:px-3 md:py-3 md:text-[11px] md:tracking-[0.2em]"
-                      >
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7">
-                    {visibleDays.map((day, index) => {
+                  <div className="grid gap-3 p-3 md:hidden">
+                    {mobileMonthDays.map((day) => {
                       const allDayEvents = monthEvents.filter((event) => overlapsDay(event, day));
-                      const dayEvents = allDayEvents.slice(0, 2);
-                      const inCurrentMonth = day.getMonth() === currentDate.getMonth();
+                      const dayEvents = allDayEvents.slice(0, 3);
+                      const availability = getDayAvailability(events, day);
 
                       return (
-                        <div
-                          key={index}
-                          className="min-h-[84px] border-l border-t border-white/8 bg-[#09101f] p-2 first:border-l-0 md:min-h-[152px] md:p-3"
+                        <button
+                          key={day.toISOString()}
+                          type="button"
+                          onClick={() => {
+                            setCurrentDate(startOfDay(day));
+                            setView("day");
+                          }}
+                          className="rounded-[20px] border border-white/10 bg-[#0c1324] p-3 text-left transition hover:border-cyan-300/25 hover:bg-[#10192c]"
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                                {formatDateLabel(day, { weekday: "short" })}
+                              </p>
+                              <p className="mt-1 text-base font-semibold text-white">
+                                {formatDateLabel(day, { day: "2-digit", month: "long" })}
+                              </p>
+                            </div>
                             <span
-                              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs md:h-9 md:w-9 md:text-sm ${
-                                isSameDay(day, new Date())
-                                  ? "bg-cyan-300 text-slate-950"
-                                  : inCurrentMonth
-                                    ? "text-white"
-                                    : "text-slate-600"
+                              className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] ${
+                                availability.isCompletelyFree
+                                  ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+                                  : availability.isPartiallyFree
+                                    ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
+                                    : "border-white/10 bg-white/[0.03] text-slate-400"
                               }`}
                             >
-                              {day.getDate()}
+                              {availability.isCompletelyFree
+                                ? "frei"
+                                : availability.isPartiallyFree
+                                  ? `${Math.floor(availability.freeMinutes / 60)}h frei`
+                                  : "ausgelastet"}
                             </span>
-                            {allDayEvents.length > 2 ? (
-                              <span className="text-[10px] text-slate-500 md:text-xs">+{allDayEvents.length - 2}</span>
-                            ) : null}
                           </div>
 
-                          <div className="mt-2 md:hidden">
-                            {allDayEvents.length > 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCurrentDate(startOfDay(day));
-                                  setView("day");
-                                }}
-                                className="flex w-full items-center justify-between rounded-lg border border-white/8 bg-[#0c1324] px-2 py-1.5 text-left"
-                              >
-                                <span className="text-[10px] text-slate-400">{allDayEvents.length} Termine</span>
-                                <span className="flex items-center gap-1">
-                                  {allDayEvents.slice(0, 3).map((event) => (
-                                    <span
-                                      key={event.id}
-                                      className="h-1.5 w-1.5 rounded-full"
-                                      style={{ backgroundColor: getEventAccentColor(event) }}
-                                    />
-                                  ))}
-                                </span>
-                              </button>
-                            ) : null}
-                          </div>
-
-                          <div className="mt-3 hidden space-y-2 md:block">
-                            {dayEvents.map((event) => (
-                              <button
-                                key={event.id}
-                                type="button"
-                                onClick={() => openEventModal(event)}
-                                className="block w-full rounded-xl border px-3 py-2 text-left transition"
-                                style={{
-                                  borderColor: `${getEventAccentColor(event)}33`,
-                                  backgroundColor: "rgba(15, 23, 41, 0.94)",
-                                }}
-                              >
-                                <p className="truncate text-xs font-semibold text-white">{event.title}</p>
-                                <p
-                                  className="mt-1 text-[11px]"
-                                  style={{ color: `${getEventAccentColor(event)}cc` }}
+                          <div className="mt-3 space-y-2">
+                            {dayEvents.length === 0 ? (
+                              <div className="rounded-xl border border-dashed border-white/10 px-3 py-3 text-sm text-slate-500">
+                                Keine Termine.
+                              </div>
+                            ) : (
+                              dayEvents.map((event) => (
+                                <div
+                                  key={event.id}
+                                  className="rounded-xl border px-3 py-2"
+                                  style={{
+                                    borderColor: `${getEventAccentColor(event)}44`,
+                                    background: `linear-gradient(180deg, ${getEventAccentColor(event)}18 0%, rgba(12,19,36,0.92) 100%)`,
+                                  }}
                                 >
-                                  {formatTime(event.startAt)}
-                                </p>
-                              </button>
-                            ))}
+                                  <p className="truncate text-sm font-medium text-white">{event.title}</p>
+                                  <p className="mt-1 text-xs" style={{ color: `${getEventAccentColor(event)}dd` }}>
+                                    {formatTime(event.startAt)} - {formatTime(event.endAt)}
+                                  </p>
+                                </div>
+                              ))
+                            )}
                           </div>
-                        </div>
+
+                          {allDayEvents.length > 3 ? (
+                            <p className="mt-3 text-xs text-slate-500">+{allDayEvents.length - 3} weitere Termine</p>
+                          ) : null}
+                        </button>
                       );
                     })}
+                  </div>
+
+                  <div className="hidden md:block">
+                    <div className="grid grid-cols-7 border-b border-white/8 bg-[#0b1325]">
+                      {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((label) => (
+                        <div
+                          key={label}
+                          className="border-l border-white/8 px-1 py-2 text-center text-[10px] uppercase tracking-[0.16em] text-slate-500 first:border-l-0 md:px-3 md:py-3 md:text-[11px] md:tracking-[0.2em]"
+                        >
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7">
+                      {visibleDays.map((day, index) => {
+                        const allDayEvents = monthEvents.filter((event) => overlapsDay(event, day));
+                        const dayEvents = allDayEvents.slice(0, 2);
+                        const inCurrentMonth = day.getMonth() === currentDate.getMonth();
+
+                        return (
+                          <div
+                            key={index}
+                            className="min-h-[152px] border-l border-t border-white/8 bg-[#09101f] p-3 first:border-l-0"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm ${
+                                  isSameDay(day, new Date())
+                                    ? "bg-cyan-300 text-slate-950"
+                                    : inCurrentMonth
+                                      ? "text-white"
+                                      : "text-slate-600"
+                                }`}
+                              >
+                                {day.getDate()}
+                              </span>
+                              {allDayEvents.length > 2 ? (
+                                <span className="text-xs text-slate-500">+{allDayEvents.length - 2}</span>
+                              ) : null}
+                            </div>
+
+                            <div className="mt-3 space-y-2">
+                              {dayEvents.map((event) => (
+                                <button
+                                  key={event.id}
+                                  type="button"
+                                  onClick={() => openEventModal(event)}
+                                  className="block w-full rounded-xl border px-3 py-2 text-left transition"
+                                  style={{
+                                    borderColor: `${getEventAccentColor(event)}33`,
+                                    backgroundColor: "rgba(15, 23, 41, 0.94)",
+                                  }}
+                                >
+                                  <p className="truncate text-xs font-semibold text-white">{event.title}</p>
+                                  <p
+                                    className="mt-1 text-[11px]"
+                                    style={{ color: `${getEventAccentColor(event)}cc` }}
+                                  >
+                                    {formatTime(event.startAt)}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1305,7 +1369,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
               )}
             </section>
 
-            <section className="rounded-[28px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] md:p-6">
+            <section className="min-w-0 rounded-[24px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5 md:p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Termin anlegen</p>
@@ -1314,17 +1378,17 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                 <div className="text-xs text-slate-500">unter dem Hauptkalender</div>
               </div>
 
-              <div className="mt-5 grid gap-3 lg:grid-cols-2">
+              <div className="mt-5 grid min-w-0 gap-3 lg:grid-cols-2">
                 <input
                   value={eventTitle}
                   onChange={(event) => setEventTitle(event.target.value)}
                   placeholder="Terminname"
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                  className={formFieldClass}
                 />
                 <select
                   value={eventOwnerId}
                   onChange={(event) => setEventOwnerId(event.target.value)}
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  className={formSelectClass}
                 >
                   <option value="">Kein User</option>
                   {users.map((user) => (
@@ -1333,7 +1397,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                     </option>
                   ))}
                 </select>
-                <div className="rounded-[24px] border border-white/10 bg-[#09101f] p-4 lg:col-span-2">
+                <div className={`${formPanelClass} lg:col-span-2`}>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Planung</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {schedulingModeOptions.map((option) => (
@@ -1356,28 +1420,28 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   type="date"
                   value={eventDate}
                   onChange={(event) => setEventDate(event.target.value)}
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  className={formSelectClass}
                 />
                 {eventSchedulingMode === "manual" ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                     <input
                       type="time"
                       value={eventStartTime}
                       onChange={(event) => setEventStartTime(event.target.value)}
-                      className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                      className={formSelectClass}
                     />
                     <input
                       type="time"
                       value={eventEndTime}
                       onChange={(event) => setEventEndTime(event.target.value)}
-                      className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                      className={formSelectClass}
                     />
                   </div>
                 ) : (
                   <select
                     value={eventTimeOfDay}
                     onChange={(event) => setEventTimeOfDay(event.target.value as typeof eventTimeOfDay)}
-                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    className={formSelectClass}
                   >
                     {timeOfDayOptions.map((option) => (
                       <option key={option.key} value={option.key}>
@@ -1387,11 +1451,11 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   </select>
                 )}
                 {eventSchedulingMode === "manual" ? (
-                  <div className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-slate-400">
+                  <div className={formReadoutClass}>
                     Feste Start- und Endzeit. Die Anfahrt wird separat davor berechnet.
                   </div>
                 ) : (
-                  <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                  <div className="min-w-0 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 max-[380px]:flex-col max-[380px]:items-start">
                     <input
                       value={eventDurationMinutes}
                       onChange={(event) => setEventDurationMinutes(event.target.value)}
@@ -1399,41 +1463,46 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                       placeholder="60"
                       className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
                     />
-                    <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
+                    <span className="shrink-0 text-sm text-slate-500 max-[380px]:ml-0">Minuten</span>
                   </div>
                 )}
                 <input
                   value={eventLocation}
                   onChange={(event) => setEventLocation(event.target.value)}
                   placeholder="Ort"
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                  className={formFieldClass}
                 />
-                <select
-                  value={eventDepartureOriginKey}
-                  onChange={(event) => setEventDepartureOriginKey(event.target.value)}
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                >
-                  {departureOrigins.map((origin) => (
-                    <option key={origin.key} value={origin.key}>
-                      {origin.label} ({origin.address})
-                    </option>
-                  ))}
-                </select>
+                <div className="min-w-0">
+                  <select
+                    value={eventDepartureOriginKey}
+                    onChange={(event) => setEventDepartureOriginKey(event.target.value)}
+                    className={formSelectClass}
+                  >
+                    {departureOrigins.map((origin) => (
+                      <option key={origin.key} value={origin.key}>
+                        {origin.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 px-1 text-xs text-slate-500 [overflow-wrap:anywhere]">
+                    Start: {selectedCreateDepartureOrigin.address}
+                  </p>
+                </div>
                 <input
                   value={eventInvites}
                   onChange={(event) => setEventInvites(event.target.value)}
                   placeholder="Einladungen (E-Mails, kommagetrennt)"
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                  className={formFieldClass}
                 />
                 <textarea
                   value={eventNotes}
                   onChange={(event) => setEventNotes(event.target.value)}
                   placeholder="Notizen"
                   rows={4}
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40 lg:col-span-2"
+                  className={`${formFieldClass} min-h-[112px] resize-y lg:col-span-2`}
                 />
                 {eventSchedulingMode === "manual" && !createManualTiming ? (
-                  <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 lg:col-span-2">
+                  <div className="min-w-0 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 lg:col-span-2">
                     Die Endzeit muss nach der Startzeit liegen.
                   </div>
                 ) : null}
@@ -1441,7 +1510,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   type="button"
                   disabled={isPending || !canCreateEvent}
                   onClick={handleCreateEvent}
-                  className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60 lg:col-span-2"
+                  className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60 lg:col-span-2"
                 >
                   Termin speichern
                 </button>
@@ -1467,19 +1536,19 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                     </div>
                   ) : manualTravelEstimate ? (
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                      <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Anfahrt</p>
                         <p className="mt-2 text-lg font-semibold text-white">{manualTravelEstimate.travelMinutes} Min.</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                      <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Abfahrt</p>
                         <p className="mt-2 text-lg font-semibold text-white">
                           {createDepartureAt ? formatTime(createDepartureAt) : "--:--"}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                      <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Von</p>
-                        <p className="mt-2 text-sm text-slate-300">{manualTravelEstimate.sourceLabel}</p>
+                        <p className="mt-2 text-sm text-slate-300 [overflow-wrap:anywhere]">{manualTravelEstimate.sourceLabel}</p>
                       </div>
                     </div>
                   ) : (
@@ -1534,7 +1603,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                           <p className="mt-2 text-xs text-slate-400">
                             Anfahrt: {suggestion.travelMinutes} Min.
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-slate-500 [overflow-wrap:anywhere]">
                             Von: {suggestion.sourceLabel}
                           </p>
                         </button>
@@ -1545,7 +1614,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
               )}
             </section>
 
-            <section className="rounded-[28px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] md:p-6">
+            <section className="min-w-0 rounded-[24px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:rounded-[28px] sm:p-5 md:p-6">
               <div className="flex flex-col gap-4 border-b border-white/8 pb-5 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-sm uppercase tracking-[0.35em] text-slate-500">Kalender-Sync</p>
@@ -1582,7 +1651,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                     type="button"
                     disabled={isPending}
                     onClick={handleCreateCalendarSource}
-                    className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+                    className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60 lg:w-auto"
                   >
                     Kalender anbinden
                   </button>
@@ -1591,7 +1660,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
 
               <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
                 <div className="rounded-[24px] border border-white/10 bg-[#09101f] p-4">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Quellen</p>
                       <p className="mt-1 text-sm text-slate-300">Alle eingebundenen Kalender mit eigener Farbe und Sync-Status.</p>
@@ -1641,8 +1710,8 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                               </div>
                             </div>
 
-                            <div className="flex shrink-0 flex-wrap items-center gap-3 xl:w-[240px] xl:justify-end">
-                              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300">
+                            <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center xl:w-[240px] xl:justify-end">
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300 sm:justify-start">
                                 <span>Farbe</span>
                                 <span
                                   className="relative h-11 w-11 overflow-hidden rounded-full border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
@@ -1660,7 +1729,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                                 type="button"
                                 disabled={isPending}
                                 onClick={() => handleCalendarSourceSync(source.id)}
-                                className="rounded-2xl border border-cyan-300/15 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-300/14 hover:text-white disabled:opacity-60"
+                                className="w-full rounded-2xl border border-cyan-300/15 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-300/14 hover:text-white disabled:opacity-60 sm:w-auto"
                               >
                                 Jetzt syncen
                               </button>
@@ -1668,7 +1737,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                                 type="button"
                                 disabled={isPending}
                                 onClick={() => handleCalendarSourceDelete(source.id)}
-                                className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 transition hover:bg-rose-400/10 disabled:opacity-60"
+                                className="w-full rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 transition hover:bg-rose-400/10 disabled:opacity-60 sm:w-auto"
                               >
                                 Entfernen
                               </button>
@@ -1725,12 +1794,12 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
       </WorkspaceShell>
 
       {selectedEvent ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.45)] md:p-6">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#020617]/70 p-2 backdrop-blur-sm sm:p-4 md:items-center">
+          <div className="max-h-[calc(100vh-1rem)] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-white/10 bg-[#0c1324] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_30px_120px_rgba(0,0,0,0.45)] sm:max-h-[85vh] sm:rounded-[28px] sm:p-5 md:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Termin</p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">{selectedEvent.title}</h3>
+                <h3 className="mt-2 break-words text-xl font-semibold text-white sm:text-2xl">{selectedEvent.title}</h3>
                 <p className="mt-2 text-sm text-slate-400">
                   {formatDateLabel(selectedEvent.startAt, {
                     weekday: "long",
@@ -1750,16 +1819,16 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2">
               <input
                 value={editTitle}
                 onChange={(event) => setEditTitle(event.target.value)}
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                className={formFieldClass}
               />
               <select
                 value={editOwnerId}
                 onChange={(event) => setEditOwnerId(event.target.value)}
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                className={formSelectClass}
               >
                 <option value="">Kein User</option>
                 {users.map((user) => (
@@ -1768,7 +1837,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   </option>
                 ))}
               </select>
-              <div className="rounded-[24px] border border-white/10 bg-[#09101f] p-4 md:col-span-2">
+              <div className={`${formPanelClass} md:col-span-2`}>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Planung</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {schedulingModeOptions.map((option) => (
@@ -1791,28 +1860,28 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                 type="date"
                 value={editDate}
                 onChange={(event) => setEditDate(event.target.value)}
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                className={formSelectClass}
               />
               {editSchedulingMode === "manual" ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                   <input
                     type="time"
                     value={editStartTime}
                     onChange={(event) => setEditStartTime(event.target.value)}
-                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    className={formSelectClass}
                   />
                   <input
                     type="time"
                     value={editEndTime}
                     onChange={(event) => setEditEndTime(event.target.value)}
-                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    className={formSelectClass}
                   />
                 </div>
               ) : (
                 <select
                   value={editTimeOfDay}
                   onChange={(event) => setEditTimeOfDay(event.target.value as typeof editTimeOfDay)}
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  className={formSelectClass}
                 >
                   {timeOfDayOptions.map((option) => (
                     <option key={option.key} value={option.key}>
@@ -1822,11 +1891,11 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                 </select>
               )}
               {editSchedulingMode === "manual" ? (
-                <div className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-slate-400">
+                <div className={formReadoutClass}>
                   Feste Start- und Endzeit. Die Anfahrt wird separat davor berechnet.
                 </div>
               ) : (
-                <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                <div className="min-w-0 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 max-[380px]:flex-col max-[380px]:items-start">
                   <input
                     value={editDurationMinutes}
                     onChange={(event) => setEditDurationMinutes(event.target.value)}
@@ -1834,40 +1903,45 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                     placeholder="60"
                     className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
                   />
-                  <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
+                  <span className="shrink-0 text-sm text-slate-500 max-[380px]:ml-0">Minuten</span>
                 </div>
               )}
               <input
                 value={editLocation}
                 onChange={(event) => setEditLocation(event.target.value)}
                 placeholder="Ort"
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                className={formFieldClass}
               />
-              <select
-                value={editDepartureOriginKey}
-                onChange={(event) => setEditDepartureOriginKey(event.target.value)}
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-              >
-                {departureOrigins.map((origin) => (
-                  <option key={origin.key} value={origin.key}>
-                    {origin.label} ({origin.address})
-                  </option>
-                ))}
-              </select>
+              <div className="min-w-0">
+                <select
+                  value={editDepartureOriginKey}
+                  onChange={(event) => setEditDepartureOriginKey(event.target.value)}
+                  className={formSelectClass}
+                >
+                  {departureOrigins.map((origin) => (
+                    <option key={origin.key} value={origin.key}>
+                      {origin.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 px-1 text-xs text-slate-500 [overflow-wrap:anywhere]">
+                  Start: {selectedEditDepartureOrigin.address}
+                </p>
+              </div>
               <input
                 value={editInvites}
                 onChange={(event) => setEditInvites(event.target.value)}
                 placeholder="Einladungen (E-Mails, kommagetrennt)"
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
+                className={formFieldClass}
               />
               <textarea
                 value={editNotes}
                 onChange={(event) => setEditNotes(event.target.value)}
                 rows={4}
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40 md:col-span-2"
+                className={`${formFieldClass} min-h-[112px] resize-y md:col-span-2`}
               />
               {editSchedulingMode === "manual" && !editManualTiming ? (
-                <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 md:col-span-2">
+                <div className="min-w-0 rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 md:col-span-2">
                   Die Endzeit muss nach der Startzeit liegen.
                 </div>
               ) : null}
@@ -1893,19 +1967,19 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   </div>
                 ) : editTravelEstimate ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                    <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Anfahrt</p>
                       <p className="mt-2 text-lg font-semibold text-white">{editTravelEstimate.travelMinutes} Min.</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                    <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Abfahrt</p>
                       <p className="mt-2 text-lg font-semibold text-white">
                         {editDepartureAt ? formatTime(editDepartureAt) : "--:--"}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                    <div className="min-w-0 rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Von</p>
-                      <p className="mt-2 text-sm text-slate-300">{editTravelEstimate.sourceLabel}</p>
+                      <p className="mt-2 text-sm text-slate-300 [overflow-wrap:anywhere]">{editTravelEstimate.sourceLabel}</p>
                     </div>
                   </div>
                 ) : (
@@ -1949,7 +2023,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                       <p className="mt-2 text-xs text-slate-400">
                         Anfahrt: {suggestion.travelMinutes} Min.
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-slate-500 [overflow-wrap:anywhere]">
                         Von: {suggestion.sourceLabel}
                       </p>
                     </button>

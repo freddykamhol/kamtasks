@@ -41,7 +41,7 @@ type WorkspaceStatCardProps = {
 
 export function WorkspaceShell({ activeKey, children }: WorkspaceShellProps) {
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#050816] pb-28 text-slate-100 lg:pb-0">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#050816] pb-[calc(6.5rem+env(safe-area-inset-bottom))] text-slate-100 lg:pb-0">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-x-0 top-[-18rem] h-[34rem] bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),_rgba(34,211,238,0)_58%)]" />
         <div className="absolute left-[-10rem] top-[18rem] h-[28rem] w-[28rem] rounded-full bg-cyan-300/8 blur-3xl" />
@@ -50,10 +50,10 @@ export function WorkspaceShell({ activeKey, children }: WorkspaceShellProps) {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,_rgba(5,8,22,0.78)_0%,_rgba(5,8,22,0.92)_44%,_rgba(5,8,22,1)_100%)]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-[1840px] min-w-0 flex-col px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
+      <div className="relative mx-auto flex min-h-screen max-w-[1840px] min-w-0 flex-col px-3 py-3 sm:px-4 sm:py-4 lg:flex-row lg:px-6 lg:py-6">
         <AppSidebar activeKey={activeKey} />
 
-        <section className="mt-4 min-w-0 flex-1 lg:mt-0 lg:pl-6">{children}</section>
+        <section className="mt-3 min-w-0 flex-1 sm:mt-4 lg:mt-0 lg:pl-6">{children}</section>
       </div>
     </main>
   );
@@ -70,7 +70,7 @@ export function WorkspaceHero({
   return (
     <section
       className={cx(
-        "relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_28px_100px_rgba(0,0,0,0.34)] md:p-6",
+        "relative min-w-0 w-full overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-4 shadow-[0_28px_100px_rgba(0,0,0,0.34)] sm:rounded-[32px] sm:p-5 md:p-6",
         className
       )}
     >
@@ -86,10 +86,10 @@ export function WorkspaceHero({
         >
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-500">{eyebrow}</p>
-            <h2 className="mt-3 text-2xl font-semibold text-white sm:text-3xl lg:text-[2.35rem] lg:leading-tight">
+            <h2 className="mt-3 break-words text-[1.7rem] font-semibold leading-tight text-white [overflow-wrap:anywhere] sm:text-3xl lg:text-[2.35rem] lg:leading-tight">
               {title}
             </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400 sm:text-[15px]">
+            <p className="mt-3 max-w-3xl break-words text-sm leading-6 text-slate-400 [overflow-wrap:anywhere] sm:text-[15px]">
               {description}
             </p>
           </div>
@@ -104,7 +104,7 @@ export function WorkspaceHero({
 }
 
 export function WorkspaceStatGrid({ children, className }: WorkspaceStatGridProps) {
-  return <div className={cx("grid gap-3 sm:grid-cols-3", className)}>{children}</div>;
+  return <div className={cx("grid min-w-0 gap-2.5 sm:gap-3 sm:grid-cols-3", className)}>{children}</div>;
 }
 
 export function WorkspaceStatCard({
@@ -116,13 +116,13 @@ export function WorkspaceStatCard({
   return (
     <div
       className={cx(
-        "rounded-[24px] border px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm",
+        "min-w-0 rounded-[20px] border px-3.5 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm sm:rounded-[24px] sm:px-4 sm:py-4",
         statToneClasses[tone],
         className
       )}
     >
       <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white sm:text-[2rem]">{value}</p>
+      <p className="mt-2 text-[1.65rem] font-semibold text-white sm:text-[2rem]">{value}</p>
     </div>
   );
 }
