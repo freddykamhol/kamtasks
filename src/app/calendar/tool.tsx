@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import type { CalendarSource, Event, Task, User } from "@/generated/prisma/client";
@@ -10,6 +10,7 @@ import {
   deleteCalendarSourceAction,
   deleteEventAction,
   getEventSuggestionsAction,
+  getTravelEstimateAction,
   syncCalendarSourcesIfNeededAction,
   syncCalendarSourceAction,
   updateCalendarSourceColorAction,
@@ -30,6 +31,7 @@ type Props = {
 };
 
 type CalendarView = "day" | "week" | "month";
+type SchedulingMode = "manual" | "suggested";
 type DaySegment = {
   event: EventWithRelations;
   start: Date;
@@ -45,6 +47,11 @@ type EventSuggestion = {
   sourceLabel: string;
 };
 
+type TravelEstimate = {
+  travelMinutes: number;
+  sourceLabel: string;
+};
+
 const timeOfDayOptions = [
   { key: "early_morning", label: "Früh morgens" },
   { key: "morning", label: "Morgens" },
@@ -53,6 +60,12 @@ const timeOfDayOptions = [
   { key: "evening", label: "Abends" },
 ] as const;
 
+const schedulingModeOptions = [
+  { key: "manual", label: "Feste Zeit" },
+  { key: "suggested", label: "Termin finden" },
+] as const;
+
+const defaultDepartureOriginKey = departureOrigins[0]?.key ?? "home";
 const hourRowHeight = 68;
 
 function formatDateInput(value: Date) {
@@ -60,6 +73,11 @@ function formatDateInput(value: Date) {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatTimeInput(value: Date | string) {
+  const date = new Date(value);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatTime(value: Date | string) {
@@ -100,6 +118,54 @@ function formatSyncLabel(value: Date | string | null | undefined) {
 
 function getEventAccentColor(event: EventWithRelations) {
   return event.calendarSource?.color || "#7dd3fc";
+}
+
+function buildManualTiming(isoDate: string, startTime: string, endTime: string) {
+  if (!isoDate || !startTime || !endTime) {
+    return null;
+  }
+
+  const startAt = new Date(`${isoDate}T${startTime}:00`);
+  const endAt = new Date(`${isoDate}T${endTime}:00`);
+
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+    return null;
+  }
+
+  return { startAt, endAt };
+}
+
+function getTimeOfDayForDate(value: Date) {
+  if (value.getHours() < 8) {
+    return "early_morning";
+  }
+
+  if (value.getHours() < 11) {
+    return "morning";
+  }
+
+  if (value.getHours() < 14) {
+    return "midday";
+  }
+
+  if (value.getHours() < 18) {
+    return "afternoon";
+  }
+
+  return "evening";
+}
+
+function getDepartureOriginKeyFromSourceLabel(sourceLabel: string | null | undefined) {
+  const normalized = sourceLabel?.trim();
+
+  if (!normalized) {
+    return defaultDepartureOriginKey;
+  }
+
+  return (
+    departureOrigins.find((origin) => origin.address === normalized || origin.label === normalized)?.key ??
+    defaultDepartureOriginKey
+  );
 }
 
 function startOfDay(value: Date) {
@@ -294,28 +360,43 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
   const [eventTitle, setEventTitle] = useState("");
   const [eventOwnerId, setEventOwnerId] = useState(users[0]?.id ?? "");
   const [eventDate, setEventDate] = useState(() => formatDateInput(new Date()));
+  const [eventSchedulingMode, setEventSchedulingMode] = useState<SchedulingMode>("manual");
+  const [eventStartTime, setEventStartTime] = useState("09:00");
+  const [eventEndTime, setEventEndTime] = useState("10:00");
   const [eventTimeOfDay, setEventTimeOfDay] = useState<"early_morning" | "morning" | "midday" | "afternoon" | "evening">("morning");
   const [eventDurationMinutes, setEventDurationMinutes] = useState("60");
-  const [departureOriginKey, setDepartureOriginKey] = useState<string>(departureOrigins[0].key);
+  const [eventDepartureOriginKey, setEventDepartureOriginKey] = useState<string>(defaultDepartureOriginKey);
   const [eventLocation, setEventLocation] = useState("");
   const [eventInvites, setEventInvites] = useState("");
   const [eventNotes, setEventNotes] = useState("");
   const [suggestions, setSuggestions] = useState<EventSuggestion[]>([]);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
   const [selectedSuggestionStartAt, setSelectedSuggestionStartAt] = useState<string | null>(null);
+  const [manualTravelEstimate, setManualTravelEstimate] = useState<TravelEstimate | null>(null);
+  const [isManualTravelLoading, setIsManualTravelLoading] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editOwnerId, setEditOwnerId] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editSchedulingMode, setEditSchedulingMode] = useState<SchedulingMode>("manual");
+  const [editStartTime, setEditStartTime] = useState("09:00");
+  const [editEndTime, setEditEndTime] = useState("10:00");
   const [editTimeOfDay, setEditTimeOfDay] = useState<"early_morning" | "morning" | "midday" | "afternoon" | "evening">("morning");
   const [editDurationMinutes, setEditDurationMinutes] = useState("60");
+  const [editDepartureOriginKey, setEditDepartureOriginKey] = useState<string>(defaultDepartureOriginKey);
   const [editLocation, setEditLocation] = useState("");
   const [editInvites, setEditInvites] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editSuggestions, setEditSuggestions] = useState<EventSuggestion[]>([]);
+  const [isEditSuggestionsLoading, setIsEditSuggestionsLoading] = useState(false);
   const [selectedEditSuggestionStartAt, setSelectedEditSuggestionStartAt] = useState<string | null>(null);
+  const [editTravelEstimate, setEditTravelEstimate] = useState<TravelEstimate | null>(null);
+  const [isEditTravelLoading, setIsEditTravelLoading] = useState(false);
   const [showCalendarSourceForm, setShowCalendarSourceForm] = useState(false);
   const [calendarSourceName, setCalendarSourceName] = useState("");
   const [calendarSourceUrl, setCalendarSourceUrl] = useState("");
   const feedUrl = typeof window === "undefined" ? "" : `${window.location.origin}/api/calendar/feed`;
+  const deferredEventLocation = useDeferredValue(eventLocation);
+  const deferredEditLocation = useDeferredValue(editLocation);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -333,6 +414,47 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) ?? null,
     [events, selectedEventId]
+  );
+  const createManualTiming = useMemo(
+    () => buildManualTiming(eventDate, eventStartTime, eventEndTime),
+    [eventDate, eventEndTime, eventStartTime]
+  );
+  const editManualTiming = useMemo(
+    () => buildManualTiming(editDate, editStartTime, editEndTime),
+    [editDate, editEndTime, editStartTime]
+  );
+  const selectedSuggestion = useMemo(
+    () => suggestions.find((suggestion) => suggestion.startAt === selectedSuggestionStartAt) ?? suggestions[0] ?? null,
+    [selectedSuggestionStartAt, suggestions]
+  );
+  const selectedEditSuggestion = useMemo(
+    () =>
+      editSuggestions.find((suggestion) => suggestion.startAt === selectedEditSuggestionStartAt) ??
+      editSuggestions[0] ??
+      null,
+    [editSuggestions, selectedEditSuggestionStartAt]
+  );
+  const createDepartureAt = useMemo(() => {
+    if (!createManualTiming || !manualTravelEstimate) {
+      return null;
+    }
+
+    return new Date(createManualTiming.startAt.getTime() - manualTravelEstimate.travelMinutes * 60_000);
+  }, [createManualTiming, manualTravelEstimate]);
+  const editDepartureAt = useMemo(() => {
+    if (!editManualTiming || !editTravelEstimate) {
+      return null;
+    }
+
+    return new Date(editManualTiming.startAt.getTime() - editTravelEstimate.travelMinutes * 60_000);
+  }, [editManualTiming, editTravelEstimate]);
+  const canCreateEvent = Boolean(
+    eventTitle.trim() &&
+      (eventSchedulingMode === "manual" ? createManualTiming : selectedSuggestion)
+  );
+  const canUpdateEvent = Boolean(
+    editTitle.trim() &&
+      (editSchedulingMode === "manual" ? editManualTiming : selectedEditSuggestion)
   );
 
   const visibleDays = useMemo(() => getViewDays(currentDate, view), [currentDate, view]);
@@ -352,16 +474,24 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
     let cancelled = false;
 
     async function loadSuggestions() {
-      if (!eventDate) {
-        setSuggestions([]);
+      if (eventSchedulingMode !== "suggested") {
+        setIsSuggestionsLoading(false);
         return;
       }
 
+      if (!eventDate) {
+        setSuggestions([]);
+        setSelectedSuggestionStartAt(null);
+        setIsSuggestionsLoading(false);
+        return;
+      }
+
+      setIsSuggestionsLoading(true);
       const nextSuggestions = await getEventSuggestionsAction({
         isoDate: eventDate,
         durationMinutes: Number(eventDurationMinutes) || 60,
-        location: eventLocation || undefined,
-        departureOriginKey,
+        location: deferredEventLocation || undefined,
+        departureOriginKey: eventDepartureOriginKey,
         timeOfDay: eventTimeOfDay,
       });
 
@@ -374,30 +504,49 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
 
           return nextSuggestions[0]?.startAt ?? null;
         });
+        setIsSuggestionsLoading(false);
       }
     }
 
-    void loadSuggestions();
+    const timeoutId = window.setTimeout(() => {
+      void loadSuggestions();
+    }, 250);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [departureOriginKey, eventDate, eventDurationMinutes, eventLocation, eventTimeOfDay]);
+  }, [
+    deferredEventLocation,
+    eventDate,
+    eventDepartureOriginKey,
+    eventDurationMinutes,
+    eventSchedulingMode,
+    eventTimeOfDay,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadEditSuggestions() {
-      if (!selectedEventId || !editDate) {
-        setEditSuggestions([]);
+      if (editSchedulingMode !== "suggested") {
+        setIsEditSuggestionsLoading(false);
         return;
       }
 
+      if (!selectedEventId || !editDate) {
+        setEditSuggestions([]);
+        setSelectedEditSuggestionStartAt(null);
+        setIsEditSuggestionsLoading(false);
+        return;
+      }
+
+      setIsEditSuggestionsLoading(true);
       const nextSuggestions = await getEventSuggestionsAction({
         isoDate: editDate,
         durationMinutes: Number(editDurationMinutes) || 60,
-        location: editLocation || undefined,
-        departureOriginKey,
+        location: deferredEditLocation || undefined,
+        departureOriginKey: editDepartureOriginKey,
         timeOfDay: editTimeOfDay,
       });
 
@@ -410,15 +559,101 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
 
           return nextSuggestions[0]?.startAt ?? null;
         });
+        setIsEditSuggestionsLoading(false);
       }
     }
 
-    void loadEditSuggestions();
+    const timeoutId = window.setTimeout(() => {
+      void loadEditSuggestions();
+    }, 250);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [departureOriginKey, editDate, editDurationMinutes, editLocation, editTimeOfDay, selectedEventId]);
+  }, [
+    deferredEditLocation,
+    editDate,
+    editDepartureOriginKey,
+    editDurationMinutes,
+    editSchedulingMode,
+    editTimeOfDay,
+    selectedEventId,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadManualTravelEstimate() {
+      if (eventSchedulingMode !== "manual") {
+        setIsManualTravelLoading(false);
+        return;
+      }
+
+      if (!deferredEventLocation.trim()) {
+        setManualTravelEstimate(null);
+        setIsManualTravelLoading(false);
+        return;
+      }
+
+      setIsManualTravelLoading(true);
+      const nextEstimate = await getTravelEstimateAction({
+        location: deferredEventLocation,
+        departureOriginKey: eventDepartureOriginKey,
+      });
+
+      if (!cancelled) {
+        setManualTravelEstimate(nextEstimate);
+        setIsManualTravelLoading(false);
+      }
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadManualTravelEstimate();
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [deferredEventLocation, eventDepartureOriginKey, eventSchedulingMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadEditTravelEstimate() {
+      if (editSchedulingMode !== "manual") {
+        setIsEditTravelLoading(false);
+        return;
+      }
+
+      if (!deferredEditLocation.trim()) {
+        setEditTravelEstimate(null);
+        setIsEditTravelLoading(false);
+        return;
+      }
+
+      setIsEditTravelLoading(true);
+      const nextEstimate = await getTravelEstimateAction({
+        location: deferredEditLocation,
+        departureOriginKey: editDepartureOriginKey,
+      });
+
+      if (!cancelled) {
+        setEditTravelEstimate(nextEstimate);
+        setIsEditTravelLoading(false);
+      }
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadEditTravelEstimate();
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [deferredEditLocation, editDepartureOriginKey, editSchedulingMode]);
 
   function runAction(action: () => Promise<void>) {
     startTransition(async () => {
@@ -446,32 +681,65 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
     setEditTitle(event.title);
     setEditOwnerId(event.ownerId ?? "");
     setEditDate(formatDateInput(new Date(event.startAt)));
-    setEditTimeOfDay(
-      new Date(event.startAt).getHours() < 8
-        ? "early_morning"
-        : new Date(event.startAt).getHours() < 11
-        ? "morning"
-        : new Date(event.startAt).getHours() < 14
-          ? "midday"
-          : new Date(event.startAt).getHours() < 18
-            ? "afternoon"
-            : "evening"
-    );
+    setEditSchedulingMode("manual");
+    setEditStartTime(formatTimeInput(event.startAt));
+    setEditEndTime(formatTimeInput(event.endAt));
+    setEditTimeOfDay(getTimeOfDayForDate(new Date(event.startAt)));
     setEditDurationMinutes(
       String(
         event.durationMinutes ??
           Math.round((new Date(event.endAt).getTime() - new Date(event.startAt).getTime()) / 60_000)
       )
     );
+    setEditDepartureOriginKey(getDepartureOriginKeyFromSourceLabel(event.travelSourceLabel));
     setEditLocation(event.location ?? "");
     setEditInvites(event.invites ?? "");
     setEditNotes(event.notes ?? "");
+    setEditTravelEstimate(
+      event.travelSourceLabel
+        ? {
+            travelMinutes: event.travelMinutes ?? 0,
+            sourceLabel: event.travelSourceLabel,
+          }
+        : null
+    );
     setSelectedEditSuggestionStartAt(new Date(event.startAt).toISOString());
   }
 
   function handleCreateEvent() {
-    const selectedSuggestion =
-      suggestions.find((suggestion) => suggestion.startAt === selectedSuggestionStartAt) ?? suggestions[0];
+    if (eventSchedulingMode === "manual") {
+      if (!createManualTiming) {
+        return;
+      }
+
+      runAction(async () => {
+        await createEventAction({
+          title: eventTitle,
+          startAt: createManualTiming.startAt.toISOString(),
+          endAt: createManualTiming.endAt.toISOString(),
+          travelMinutes: manualTravelEstimate?.travelMinutes || undefined,
+          travelSourceLabel: manualTravelEstimate?.sourceLabel || undefined,
+          ownerId: eventOwnerId || undefined,
+          location: eventLocation || undefined,
+          invites: eventInvites || undefined,
+          notes: eventNotes || undefined,
+        });
+        setEventTitle("");
+        setEventDate(formatDateInput(new Date()));
+        setEventSchedulingMode("manual");
+        setEventStartTime("09:00");
+        setEventEndTime("10:00");
+        setEventTimeOfDay("morning");
+        setEventDurationMinutes("60");
+        setEventLocation("");
+        setEventInvites("");
+        setEventNotes("");
+        setManualTravelEstimate(null);
+        setSuggestions([]);
+        setSelectedSuggestionStartAt(null);
+      });
+      return;
+    }
 
     if (!selectedSuggestion) {
       return;
@@ -504,11 +772,30 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
       return;
     }
 
-    const selectedSuggestion =
-      editSuggestions.find((suggestion) => suggestion.startAt === selectedEditSuggestionStartAt) ??
-      editSuggestions[0];
+    if (editSchedulingMode === "manual") {
+      if (!editManualTiming) {
+        return;
+      }
 
-    if (!selectedSuggestion) {
+      runAction(async () => {
+        await updateEventAction({
+          eventId: selectedEvent.id,
+          title: editTitle,
+          startAt: editManualTiming.startAt.toISOString(),
+          endAt: editManualTiming.endAt.toISOString(),
+          travelMinutes: editTravelEstimate?.travelMinutes || undefined,
+          travelSourceLabel: editTravelEstimate?.sourceLabel || undefined,
+          ownerId: editOwnerId || undefined,
+          location: editLocation || undefined,
+          invites: editInvites || undefined,
+          notes: editNotes || undefined,
+        });
+        setSelectedEventId(null);
+      });
+      return;
+    }
+
+    if (!selectedEditSuggestion) {
       return;
     }
 
@@ -516,10 +803,10 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
       await updateEventAction({
         eventId: selectedEvent.id,
         title: editTitle,
-        startAt: selectedSuggestion.startAt,
+        startAt: selectedEditSuggestion.startAt,
         durationMinutes: Number(editDurationMinutes) || undefined,
-        travelMinutes: selectedSuggestion.travelMinutes || undefined,
-        travelSourceLabel: selectedSuggestion.sourceLabel || undefined,
+        travelMinutes: selectedEditSuggestion.travelMinutes || undefined,
+        travelSourceLabel: selectedEditSuggestion.sourceLabel || undefined,
         ownerId: editOwnerId || undefined,
         location: editLocation || undefined,
         invites: editInvites || undefined,
@@ -1028,33 +1315,75 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                     </option>
                   ))}
                 </select>
+                <div className="rounded-[24px] border border-white/10 bg-[#09101f] p-4 lg:col-span-2">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Planung</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {schedulingModeOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => setEventSchedulingMode(option.key)}
+                        className={`rounded-2xl border px-4 py-3 text-sm transition ${
+                          eventSchedulingMode === option.key
+                            ? "border-cyan-300/40 bg-cyan-300/10 text-white"
+                            : "border-white/10 bg-[#0c1324] text-slate-400 hover:border-cyan-300/30 hover:text-white"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <input
                   type="date"
                   value={eventDate}
                   onChange={(event) => setEventDate(event.target.value)}
                   className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
                 />
-                <select
-                  value={eventTimeOfDay}
-                  onChange={(event) => setEventTimeOfDay(event.target.value as typeof eventTimeOfDay)}
-                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-                >
-                  {timeOfDayOptions.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
-                  <input
-                    value={eventDurationMinutes}
-                    onChange={(event) => setEventDurationMinutes(event.target.value)}
-                    inputMode="numeric"
-                    placeholder="60"
-                    className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
-                  />
-                  <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
-                </div>
+                {eventSchedulingMode === "manual" ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      type="time"
+                      value={eventStartTime}
+                      onChange={(event) => setEventStartTime(event.target.value)}
+                      className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    />
+                    <input
+                      type="time"
+                      value={eventEndTime}
+                      onChange={(event) => setEventEndTime(event.target.value)}
+                      className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                    />
+                  </div>
+                ) : (
+                  <select
+                    value={eventTimeOfDay}
+                    onChange={(event) => setEventTimeOfDay(event.target.value as typeof eventTimeOfDay)}
+                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  >
+                    {timeOfDayOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {eventSchedulingMode === "manual" ? (
+                  <div className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-slate-400">
+                    Feste Start- und Endzeit. Die Anfahrt wird separat davor berechnet.
+                  </div>
+                ) : (
+                  <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                    <input
+                      value={eventDurationMinutes}
+                      onChange={(event) => setEventDurationMinutes(event.target.value)}
+                      inputMode="numeric"
+                      placeholder="60"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                    />
+                    <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
+                  </div>
+                )}
                 <input
                   value={eventLocation}
                   onChange={(event) => setEventLocation(event.target.value)}
@@ -1062,8 +1391,8 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
                 />
                 <select
-                  value={departureOriginKey}
-                  onChange={(event) => setDepartureOriginKey(event.target.value)}
+                  value={eventDepartureOriginKey}
+                  onChange={(event) => setEventDepartureOriginKey(event.target.value)}
                   className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
                 >
                   {departureOrigins.map((origin) => (
@@ -1085,9 +1414,14 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   rows={4}
                   className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40 lg:col-span-2"
                 />
+                {eventSchedulingMode === "manual" && !createManualTiming ? (
+                  <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 lg:col-span-2">
+                    Die Endzeit muss nach der Startzeit liegen.
+                  </div>
+                ) : null}
                 <button
                   type="button"
-                  disabled={isPending}
+                  disabled={isPending || !canCreateEvent}
                   onClick={handleCreateEvent}
                   className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60 lg:col-span-2"
                 >
@@ -1095,55 +1429,102 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                 </button>
               </div>
 
-              <div className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Vorschläge</p>
-                    <p className="mt-1 text-sm text-white">3 Terminoptionen mit 15 Minuten Puffer</p>
+              {eventSchedulingMode === "manual" ? (
+                <div className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Anfahrt</p>
+                      <p className="mt-1 text-sm text-white">Die Terminzeit bleibt fix, die Anfahrt wird davor eingeplant.</p>
+                    </div>
+                    <p className="text-[11px] text-slate-500">Routing via OSM Nominatim + OSRM</p>
                   </div>
-                  <p className="text-[11px] text-slate-500">Routing via OSM Nominatim + OSRM</p>
-                </div>
 
-                <div className="mt-4 grid gap-3 xl:grid-cols-3">
-                  {suggestions.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500 lg:col-span-3">
-                      Keine Vorschläge gefunden.
+                  {!eventLocation.trim() ? (
+                    <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500">
+                      Ort hinterlegen, um die Anfahrtszeit zu berechnen.
+                    </div>
+                  ) : isManualTravelLoading ? (
+                    <div className="mt-4 rounded-2xl border border-white/10 px-4 py-5 text-sm text-slate-400">
+                      Anfahrt wird berechnet...
+                    </div>
+                  ) : manualTravelEstimate ? (
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Anfahrt</p>
+                        <p className="mt-2 text-lg font-semibold text-white">{manualTravelEstimate.travelMinutes} Min.</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Abfahrt</p>
+                        <p className="mt-2 text-lg font-semibold text-white">
+                          {createDepartureAt ? formatTime(createDepartureAt) : "--:--"}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Von</p>
+                        <p className="mt-2 text-sm text-slate-300">{manualTravelEstimate.sourceLabel}</p>
+                      </div>
                     </div>
                   ) : (
-                    suggestions.map((suggestion, index) => (
-                      <button
-                        key={`${suggestion.startAt}-${index}`}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSuggestionStartAt(suggestion.startAt);
-                        }}
-                        className={`rounded-2xl border p-4 text-left transition ${
-                          selectedSuggestionStartAt === suggestion.startAt
-                            ? "border-cyan-300/40 bg-cyan-300/10"
-                            : "border-white/10 bg-[#0c1324] hover:border-cyan-300/30"
-                        }`}
-                      >
-                        <p className="text-xs text-slate-500">
-                          {formatDateLabel(suggestion.startAt, {
-                            weekday: "short",
-                            day: "2-digit",
-                            month: "2-digit",
-                          })}
-                        </p>
-                        <p className="text-sm font-medium text-white">
-                          {formatTime(suggestion.startAt)} - {formatTime(suggestion.endAt)}
-                        </p>
-                        <p className="mt-2 text-xs text-slate-400">
-                          Anfahrt: {suggestion.travelMinutes} Min.
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Von: {suggestion.sourceLabel}
-                        </p>
-                      </button>
-                    ))
+                    <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500">
+                      Keine Anfahrtsdaten gefunden.
+                    </div>
                   )}
                 </div>
-              </div>
+              ) : (
+                <div className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Vorschläge</p>
+                      <p className="mt-1 text-sm text-white">3 Terminoptionen mit 15 Minuten Puffer</p>
+                    </div>
+                    <p className="text-[11px] text-slate-500">Routing via OSM Nominatim + OSRM</p>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 xl:grid-cols-3">
+                    {isSuggestionsLoading ? (
+                      <div className="rounded-2xl border border-white/10 px-4 py-5 text-sm text-slate-400 lg:col-span-3">
+                        Vorschläge werden berechnet...
+                      </div>
+                    ) : suggestions.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500 lg:col-span-3">
+                        Keine Vorschläge gefunden.
+                      </div>
+                    ) : (
+                      suggestions.map((suggestion, index) => (
+                        <button
+                          key={`${suggestion.startAt}-${index}`}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSuggestionStartAt(suggestion.startAt);
+                          }}
+                          className={`rounded-2xl border p-4 text-left transition ${
+                            selectedSuggestionStartAt === suggestion.startAt
+                              ? "border-cyan-300/40 bg-cyan-300/10"
+                              : "border-white/10 bg-[#0c1324] hover:border-cyan-300/30"
+                          }`}
+                        >
+                          <p className="text-xs text-slate-500">
+                            {formatDateLabel(suggestion.startAt, {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "2-digit",
+                            })}
+                          </p>
+                          <p className="text-sm font-medium text-white">
+                            {formatTime(suggestion.startAt)} - {formatTime(suggestion.endAt)}
+                          </p>
+                          <p className="mt-2 text-xs text-slate-400">
+                            Anfahrt: {suggestion.travelMinutes} Min.
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Von: {suggestion.sourceLabel}
+                          </p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="rounded-[28px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] md:p-6">
@@ -1369,39 +1750,92 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                   </option>
                 ))}
               </select>
+              <div className="rounded-[24px] border border-white/10 bg-[#09101f] p-4 md:col-span-2">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Planung</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {schedulingModeOptions.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setEditSchedulingMode(option.key)}
+                      className={`rounded-2xl border px-4 py-3 text-sm transition ${
+                        editSchedulingMode === option.key
+                          ? "border-cyan-300/40 bg-cyan-300/10 text-white"
+                          : "border-white/10 bg-[#0c1324] text-slate-400 hover:border-cyan-300/30 hover:text-white"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="date"
                 value={editDate}
                 onChange={(event) => setEditDate(event.target.value)}
                 className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
               />
-              <select
-                value={editTimeOfDay}
-                onChange={(event) => setEditTimeOfDay(event.target.value as typeof editTimeOfDay)}
-                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
-              >
-                {timeOfDayOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
-                <input
-                  value={editDurationMinutes}
-                  onChange={(event) => setEditDurationMinutes(event.target.value)}
-                  inputMode="numeric"
-                  placeholder="60"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
-                />
-                <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
-              </div>
+              {editSchedulingMode === "manual" ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    type="time"
+                    value={editStartTime}
+                    onChange={(event) => setEditStartTime(event.target.value)}
+                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  />
+                  <input
+                    type="time"
+                    value={editEndTime}
+                    onChange={(event) => setEditEndTime(event.target.value)}
+                    className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                  />
+                </div>
+              ) : (
+                <select
+                  value={editTimeOfDay}
+                  onChange={(event) => setEditTimeOfDay(event.target.value as typeof editTimeOfDay)}
+                  className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+                >
+                  {timeOfDayOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {editSchedulingMode === "manual" ? (
+                <div className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-slate-400">
+                  Feste Start- und Endzeit. Die Anfahrt wird separat davor berechnet.
+                </div>
+              ) : (
+                <div className="flex items-center rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3">
+                  <input
+                    value={editDurationMinutes}
+                    onChange={(event) => setEditDurationMinutes(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="60"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                  />
+                  <span className="ml-3 shrink-0 text-sm text-slate-500">Minuten</span>
+                </div>
+              )}
               <input
                 value={editLocation}
                 onChange={(event) => setEditLocation(event.target.value)}
                 placeholder="Ort"
                 className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/40"
               />
+              <select
+                value={editDepartureOriginKey}
+                onChange={(event) => setEditDepartureOriginKey(event.target.value)}
+                className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40"
+              >
+                {departureOrigins.map((origin) => (
+                  <option key={origin.key} value={origin.key}>
+                    {origin.label} ({origin.address})
+                  </option>
+                ))}
+              </select>
               <input
                 value={editInvites}
                 onChange={(event) => setEditInvites(event.target.value)}
@@ -1414,45 +1848,97 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                 rows={4}
                 className="rounded-2xl border border-white/10 bg-[#09101f] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/40 md:col-span-2"
               />
+              {editSchedulingMode === "manual" && !editManualTiming ? (
+                <div className="rounded-2xl border border-rose-400/20 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-200 md:col-span-2">
+                  Die Endzeit muss nach der Startzeit liegen.
+                </div>
+              ) : null}
             </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
-              {editSuggestions.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500 md:col-span-3">
-                  Keine Vorschläge gefunden.
+            {editSchedulingMode === "manual" ? (
+              <div className="mt-5 rounded-[24px] border border-white/10 bg-[#09101f] p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Anfahrt</p>
+                    <p className="mt-1 text-sm text-white">Die Terminzeit bleibt fix, die Anfahrt wird davor eingeplant.</p>
+                  </div>
+                  <p className="text-[11px] text-slate-500">Routing via OSM Nominatim + OSRM</p>
                 </div>
-              ) : (
-                editSuggestions.map((suggestion, index) => (
-                  <button
-                    key={`${suggestion.startAt}-${index}`}
-                    type="button"
-                    onClick={() => setSelectedEditSuggestionStartAt(suggestion.startAt)}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      selectedEditSuggestionStartAt === suggestion.startAt
-                        ? "border-cyan-300/40 bg-cyan-300/10"
-                        : "border-white/10 bg-[#09101f] hover:border-cyan-300/30"
-                    }`}
-                  >
-                    <p className="text-xs text-slate-500">
-                      {formatDateLabel(suggestion.startAt, {
-                        weekday: "short",
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </p>
-                    <p className="text-sm font-medium text-white">
-                      {formatTime(suggestion.startAt)} - {formatTime(suggestion.endAt)}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-400">
-                      Anfahrt: {suggestion.travelMinutes} Min.
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Von: {suggestion.sourceLabel}
-                    </p>
-                  </button>
-                ))
-              )}
-            </div>
+
+                {!editLocation.trim() ? (
+                  <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500">
+                    Ort hinterlegen, um die Anfahrtszeit zu berechnen.
+                  </div>
+                ) : isEditTravelLoading ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 px-4 py-5 text-sm text-slate-400">
+                    Anfahrt wird berechnet...
+                  </div>
+                ) : editTravelEstimate ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Anfahrt</p>
+                      <p className="mt-2 text-lg font-semibold text-white">{editTravelEstimate.travelMinutes} Min.</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Abfahrt</p>
+                      <p className="mt-2 text-lg font-semibold text-white">
+                        {editDepartureAt ? formatTime(editDepartureAt) : "--:--"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-[#0c1324] px-4 py-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Von</p>
+                      <p className="mt-2 text-sm text-slate-300">{editTravelEstimate.sourceLabel}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500">
+                    Keine Anfahrtsdaten gefunden.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                {isEditSuggestionsLoading ? (
+                  <div className="rounded-2xl border border-white/10 px-4 py-5 text-sm text-slate-400 md:col-span-3">
+                    Vorschläge werden berechnet...
+                  </div>
+                ) : editSuggestions.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-500 md:col-span-3">
+                    Keine Vorschläge gefunden.
+                  </div>
+                ) : (
+                  editSuggestions.map((suggestion, index) => (
+                    <button
+                      key={`${suggestion.startAt}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedEditSuggestionStartAt(suggestion.startAt)}
+                      className={`rounded-2xl border p-4 text-left transition ${
+                        selectedEditSuggestionStartAt === suggestion.startAt
+                          ? "border-cyan-300/40 bg-cyan-300/10"
+                          : "border-white/10 bg-[#09101f] hover:border-cyan-300/30"
+                      }`}
+                    >
+                      <p className="text-xs text-slate-500">
+                        {formatDateLabel(suggestion.startAt, {
+                          weekday: "short",
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </p>
+                      <p className="text-sm font-medium text-white">
+                        {formatTime(suggestion.startAt)} - {formatTime(suggestion.endAt)}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-400">
+                        Anfahrt: {suggestion.travelMinutes} Min.
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Von: {suggestion.sourceLabel}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
 
             <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-400">
               {selectedEvent.owner ? <span className="rounded-full border border-white/10 px-3 py-1">{selectedEvent.owner.name}</span> : null}
@@ -1492,7 +1978,7 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
                 </button>
                 <button
                   type="button"
-                  disabled={isPending}
+                  disabled={isPending || !canUpdateEvent}
                   onClick={handleUpdateEvent}
                   className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-medium text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60 sm:w-auto"
                 >

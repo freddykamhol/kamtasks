@@ -24,6 +24,7 @@ type CreateUserInput = {
 type CreateEventInput = {
   title: string;
   startAt: string;
+  endAt?: string;
   durationMinutes?: number;
   travelMinutes?: number;
   travelSourceLabel?: string;
@@ -37,6 +38,7 @@ type UpdateEventInput = {
   eventId: string;
   title: string;
   startAt: string;
+  endAt?: string;
   durationMinutes?: number;
   travelMinutes?: number;
   travelSourceLabel?: string;
@@ -54,6 +56,11 @@ type EventSuggestionInput = {
   timeOfDay?: "early_morning" | "morning" | "midday" | "afternoon" | "evening";
 };
 
+type TravelEstimateInput = {
+  location?: string;
+  departureOriginKey?: string;
+};
+
 type CreateCalendarSourceInput = {
   name: string;
   url: string;
@@ -65,6 +72,29 @@ function clampDurationMinutes(value: number | undefined) {
   }
 
   return Math.min(Math.max(Math.round(value), 15), 12 * 60);
+}
+
+function resolveEventTiming(startAtInput: string, durationMinutesInput?: number, endAtInput?: string) {
+  const startAt = new Date(startAtInput);
+
+  if (Number.isNaN(startAt.getTime())) {
+    return null;
+  }
+
+  if (endAtInput) {
+    const endAt = new Date(endAtInput);
+
+    if (Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+      return null;
+    }
+
+    const durationMinutes = Math.max(Math.round((endAt.getTime() - startAt.getTime()) / 60_000), 1);
+    return { startAt, endAt, durationMinutes };
+  }
+
+  const durationMinutes = clampDurationMinutes(durationMinutesInput);
+  const endAt = new Date(startAt.getTime() + durationMinutes * 60_000);
+  return { startAt, endAt, durationMinutes };
 }
 
 function snapToQuarter(date: Date) {
@@ -298,16 +328,18 @@ export async function createEventAction(input: CreateEventInput) {
     return;
   }
 
-  const durationMinutes = clampDurationMinutes(input.durationMinutes);
-  const startAt = new Date(input.startAt);
-  const endAt = new Date(startAt.getTime() + durationMinutes * 60_000);
+  const timing = resolveEventTiming(input.startAt, input.durationMinutes, input.endAt);
+
+  if (!timing) {
+    return;
+  }
 
   await prisma.event.create({
     data: {
       title,
-      startAt,
-      endAt,
-      durationMinutes,
+      startAt: timing.startAt,
+      endAt: timing.endAt,
+      durationMinutes: timing.durationMinutes,
       travelMinutes: input.travelMinutes ?? null,
       travelSourceLabel: input.travelSourceLabel?.trim() || null,
       ownerId: input.ownerId || null,
@@ -327,17 +359,19 @@ export async function updateEventAction(input: UpdateEventInput) {
     return;
   }
 
-  const durationMinutes = clampDurationMinutes(input.durationMinutes);
-  const startAt = new Date(input.startAt);
-  const endAt = new Date(startAt.getTime() + durationMinutes * 60_000);
+  const timing = resolveEventTiming(input.startAt, input.durationMinutes, input.endAt);
+
+  if (!timing) {
+    return;
+  }
 
   await prisma.event.update({
     where: { id: input.eventId },
     data: {
       title,
-      startAt,
-      endAt,
-      durationMinutes,
+      startAt: timing.startAt,
+      endAt: timing.endAt,
+      durationMinutes: timing.durationMinutes,
       travelMinutes: input.travelMinutes ?? null,
       travelSourceLabel: input.travelSourceLabel?.trim() || null,
       ownerId: input.ownerId || null,
@@ -368,7 +402,7 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
   }
 
   const durationMinutes = clampDurationMinutes(input.durationMinutes);
-  const homeOriginAddress = getDepartureOriginAddress("home");
+  const originAddress = getDepartureOriginAddress(input.departureOriginKey);
   const targetLocation = input.location?.trim() || "";
   const suggestions: Array<{
     startAt: string;
@@ -376,6 +410,20 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
     travelMinutes: number;
     sourceLabel: string;
   }> = [];
+  const travelLookup = new Map<string, Promise<number>>();
+
+  async function getTravelMinutes(fromAddress: string, toAddress: string) {
+    const cacheKey = `${fromAddress}__${toAddress}`;
+    const cached = travelLookup.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const nextLookup = getTravelMinutesBetweenAddresses(fromAddress, toAddress);
+    travelLookup.set(cacheKey, nextLookup);
+    return nextLookup;
+  }
 
   let previousEvent:
     | {
@@ -383,6 +431,10 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
         location: string | null;
       }
     | null = null;
+
+  const travelFromOrigin = targetLocation
+    ? await getTravelMinutes(originAddress, targetLocation)
+    : 0;
 
   for (let dayOffset = 0; dayOffset < 7 && suggestions.length < 3; dayOffset += 1) {
     const lookupDate = new Date(`${input.isoDate}T00:00:00`);
@@ -414,16 +466,13 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
     const baseCandidates = [...existingEvents, null];
 
     for (const nextEvent of baseCandidates) {
-      const travelFromHome = targetLocation
-        ? await getTravelMinutesBetweenAddresses(homeOriginAddress, targetLocation)
-        : 0;
       const previousLocation = previousEvent?.location?.trim() || "";
-      const travelFromPrevious = previousLocation && targetLocation
-        ? await getTravelMinutesBetweenAddresses(previousLocation, targetLocation)
-        : travelFromHome;
-      const travelPreviousToHome = previousLocation
-        ? await getTravelMinutesBetweenAddresses(previousLocation, homeOriginAddress)
-        : 0;
+      const [travelFromPrevious, travelPreviousToOrigin] = previousLocation
+        ? await Promise.all([
+            targetLocation ? getTravelMinutes(previousLocation, targetLocation) : Promise.resolve(0),
+            getTravelMinutes(previousLocation, originAddress),
+          ])
+        : [travelFromOrigin, 0];
       const previousBufferMinutes = previousEvent ? 15 : 0;
       const previousEndAt = previousEvent ? new Date(previousEvent.endAt) : null;
 
@@ -433,15 +482,15 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
               previousEndAt.getTime() + (previousBufferMinutes + travelFromPrevious) * 60_000
             )
           )
-        : snapToQuarter(new Date(dayStart.getTime() + travelFromHome * 60_000));
+        : snapToQuarter(new Date(dayStart.getTime() + travelFromOrigin * 60_000));
       const earliestHomeStart = previousEndAt
         ? snapToQuarter(
             new Date(
               previousEndAt.getTime() +
-                (previousBufferMinutes + travelPreviousToHome + travelFromHome) * 60_000
+                (previousBufferMinutes + travelPreviousToOrigin + travelFromOrigin) * 60_000
             )
           )
-        : snapToQuarter(new Date(dayStart.getTime() + travelFromHome * 60_000));
+        : snapToQuarter(new Date(dayStart.getTime() + travelFromOrigin * 60_000));
 
       let candidateStart = new Date(earliestDirectStart);
       const nextStart = nextEvent ? new Date(nextEvent.startAt) : dayEnd;
@@ -450,8 +499,8 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
       while (suggestions.length < 3) {
         const mustLeaveFromPrevious =
           Boolean(previousEndAt && previousLocation) && candidateStart < earliestHomeStart;
-        const travelMinutes = mustLeaveFromPrevious ? travelFromPrevious : travelFromHome;
-        const sourceLabel = mustLeaveFromPrevious ? previousLocation : homeOriginAddress;
+        const travelMinutes = mustLeaveFromPrevious ? travelFromPrevious : travelFromOrigin;
+        const sourceLabel = mustLeaveFromPrevious ? previousLocation : originAddress;
         const candidateEnd = new Date(candidateStart.getTime() + durationMinutes * 60_000);
 
         if (candidateEnd > latestAllowedEnd || candidateEnd > dayEnd) {
@@ -482,6 +531,25 @@ export async function getEventSuggestionsAction(input: EventSuggestionInput) {
   }
 
   return suggestions.slice(0, 3);
+}
+
+export async function getTravelEstimateAction(input: TravelEstimateInput) {
+  const sourceLabel = getDepartureOriginAddress(input.departureOriginKey);
+  const targetLocation = input.location?.trim() || "";
+
+  if (!targetLocation) {
+    return {
+      travelMinutes: 0,
+      sourceLabel,
+    };
+  }
+
+  const travelMinutes = await getTravelMinutesBetweenAddresses(sourceLabel, targetLocation);
+
+  return {
+    travelMinutes,
+    sourceLabel,
+  };
 }
 
 function normalizeHexColor(color: string) {

@@ -4,7 +4,11 @@ type Coordinates = {
 };
 
 const geocodeCache = new Map<string, Coordinates | null>();
+const geocodeRequestCache = new Map<string, Promise<Coordinates | null>>();
 const routeCache = new Map<string, number>();
+const routeRequestCache = new Map<string, Promise<number>>();
+const GEOCODE_TIMEOUT_MS = 1_800;
+const ROUTE_TIMEOUT_MS = 2_200;
 
 function normalizeAddress(address: string) {
   return address
@@ -40,6 +44,23 @@ function estimateTravelMinutes(from: Coordinates, to: Coordinates) {
   return Math.max(Math.round((distanceKm / 38) * 60 + 4), 5);
 }
 
+async function fetchJsonWithTimeout<T>(url: URL, init: RequestInit, timeoutMs: number) {
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 async function geocodeAddress(address: string) {
   const normalized = normalizeAddress(address);
 
@@ -51,45 +72,58 @@ async function geocodeAddress(address: string) {
     return geocodeCache.get(normalized) ?? null;
   }
 
-  const queryVariants = normalized === address.trim() ? [normalized] : [normalized, address.trim()];
+  const inFlightLookup = geocodeRequestCache.get(normalized);
 
-  for (const query of queryVariants) {
-    const url = new URL("https://nominatim.openstreetmap.org/search");
-    url.searchParams.set("format", "jsonv2");
-    url.searchParams.set("limit", "1");
-    url.searchParams.set("countrycodes", "de");
-    url.searchParams.set("q", query);
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "KAMTasks/1.0 (calendar suggestions)",
-        Accept: "application/json",
-      },
-      next: { revalidate: 60 * 60 * 12 },
-    });
-
-    if (!response.ok) {
-      continue;
-    }
-
-    const data = (await response.json()) as Array<{ lat: string; lon: string }>;
-    const first = data[0];
-
-    if (!first) {
-      continue;
-    }
-
-    const coordinates = {
-      lat: Number(first.lat),
-      lon: Number(first.lon),
-    };
-
-    geocodeCache.set(normalized, coordinates);
-    return coordinates;
+  if (inFlightLookup) {
+    return inFlightLookup;
   }
 
-  geocodeCache.set(normalized, null);
-  return null;
+  const queryVariants = normalized === address.trim() ? [normalized] : [normalized, address.trim()];
+  const lookupPromise = (async () => {
+    for (const query of queryVariants) {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("format", "jsonv2");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("countrycodes", "de");
+      url.searchParams.set("q", query);
+
+      const data = await fetchJsonWithTimeout<Array<{ lat: string; lon: string }>>(
+        url,
+        {
+          headers: {
+            "User-Agent": "KAMTasks/1.0 (calendar suggestions)",
+            Accept: "application/json",
+          },
+          next: { revalidate: 60 * 60 * 12 },
+        },
+        GEOCODE_TIMEOUT_MS
+      );
+      const first = data?.[0];
+
+      if (!first) {
+        continue;
+      }
+
+      const coordinates = {
+        lat: Number(first.lat),
+        lon: Number(first.lon),
+      };
+
+      geocodeCache.set(normalized, coordinates);
+      return coordinates;
+    }
+
+    geocodeCache.set(normalized, null);
+    return null;
+  })();
+
+  geocodeRequestCache.set(normalized, lookupPromise);
+
+  try {
+    return await lookupPromise;
+  } finally {
+    geocodeRequestCache.delete(normalized);
+  }
 }
 
 export async function getTravelMinutesBetweenAddresses(fromAddress: string, toAddress: string) {
@@ -105,44 +139,56 @@ export async function getTravelMinutesBetweenAddresses(fromAddress: string, toAd
     return routeCache.get(cacheKey) ?? 0;
   }
 
-  const [fromCoordinates, toCoordinates] = await Promise.all([
-    geocodeAddress(normalizedFrom),
-    geocodeAddress(normalizedTo),
-  ]);
+  const inFlightLookup = routeRequestCache.get(cacheKey);
 
-  if (!fromCoordinates || !toCoordinates) {
-    routeCache.set(cacheKey, 0);
-    return 0;
+  if (inFlightLookup) {
+    return inFlightLookup;
   }
 
-  const url = new URL(
-    `https://router.project-osrm.org/route/v1/driving/${fromCoordinates.lon},${fromCoordinates.lat};${toCoordinates.lon},${toCoordinates.lat}`
-  );
-  url.searchParams.set("overview", "false");
+  const lookupPromise = (async () => {
+    const [fromCoordinates, toCoordinates] = await Promise.all([
+      geocodeAddress(normalizedFrom),
+      geocodeAddress(normalizedTo),
+    ]);
 
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "KAMTasks/1.0 (calendar suggestions)",
-      Accept: "application/json",
-    },
-    next: { revalidate: 60 * 60 * 12 },
-  });
+    if (!fromCoordinates || !toCoordinates) {
+      routeCache.set(cacheKey, 0);
+      return 0;
+    }
 
-  if (!response.ok) {
-    const estimatedMinutes = estimateTravelMinutes(fromCoordinates, toCoordinates);
-    routeCache.set(cacheKey, estimatedMinutes);
-    return estimatedMinutes;
+    const url = new URL(
+      `https://router.project-osrm.org/route/v1/driving/${fromCoordinates.lon},${fromCoordinates.lat};${toCoordinates.lon},${toCoordinates.lat}`
+    );
+    url.searchParams.set("overview", "false");
+
+    const data = await fetchJsonWithTimeout<{
+      routes?: Array<{ duration?: number }>;
+    }>(
+      url,
+      {
+        headers: {
+          "User-Agent": "KAMTasks/1.0 (calendar suggestions)",
+          Accept: "application/json",
+        },
+        next: { revalidate: 60 * 60 * 12 },
+      },
+      ROUTE_TIMEOUT_MS
+    );
+    const duration = data?.routes?.[0]?.duration;
+    const minutes =
+      typeof duration === "number" && duration > 0
+        ? Math.max(Math.round(duration / 60), 1)
+        : estimateTravelMinutes(fromCoordinates, toCoordinates);
+
+    routeCache.set(cacheKey, minutes);
+    return minutes;
+  })();
+
+  routeRequestCache.set(cacheKey, lookupPromise);
+
+  try {
+    return await lookupPromise;
+  } finally {
+    routeRequestCache.delete(cacheKey);
   }
-
-  const data = (await response.json()) as {
-    routes?: Array<{ duration?: number }>;
-  };
-  const duration = data.routes?.[0]?.duration;
-  const minutes =
-    typeof duration === "number" && duration > 0
-      ? Math.max(Math.round(duration / 60), 1)
-      : estimateTravelMinutes(fromCoordinates, toCoordinates);
-
-  routeCache.set(cacheKey, minutes);
-  return minutes;
 }

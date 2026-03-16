@@ -22,6 +22,9 @@ function escapeIcsValue(value: string) {
 
 export async function GET() {
   const events = await prisma.event.findMany({
+    where: {
+      calendarSourceId: null,
+    },
     orderBy: [{ startAt: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
@@ -64,4 +67,3 @@ export async function GET() {
     },
   });
 }
-
