@@ -8,9 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono: "SFMono-Regular", "Consolas", monospace;
-  --font-display: "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
 }
 
 * {
@@ -26,6 +26,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
 }
 
 h1,

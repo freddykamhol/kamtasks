@@ -2,7 +2,12 @@
 
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AppSidebar } from "@/components/app-sidebar";
+import {
+  WorkspaceHero,
+  WorkspaceShell,
+  WorkspaceStatCard,
+  WorkspaceStatGrid,
+} from "@/components/workspace-shell";
 import type { CalendarSource, Event, Task, User } from "@/generated/prisma/client";
 import {
   createCalendarSourceAction,
@@ -975,18 +980,31 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
         ? formatRangeLabel(visibleDays[0], visibleDays[visibleDays.length - 1])
         : formatDateLabel(currentDate, { month: "long", year: "numeric" });
 
-  return (
-    <main className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,_#0b1020_0%,_#060912_100%)] pb-28 text-slate-100 lg:pb-0">
-      <div className="mx-auto flex min-h-screen max-w-[1800px] flex-col px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
-        <AppSidebar activeKey="calendar" />
+  const viewLabel = view === "day" ? "Tag" : view === "week" ? "7 Tage" : "Monat";
 
-        <section className="mt-4 min-w-0 flex-1 lg:mt-0 lg:pl-6">
+  return (
+    <>
+      <WorkspaceShell activeKey="calendar">
+        <div className="grid gap-4">
+          <WorkspaceHero
+            eyebrow="Kalender"
+            title={headerLabel}
+            description="Tag, Woche und Monat folgen jetzt derselben Premium-Sprache wie der Rest von KAMTasks. Dazu kommen Vorschläge, manuelle Slots und Kalender-Sync in einer einzigen Fläche."
+            meta={
+              <WorkspaceStatGrid>
+                <WorkspaceStatCard label="Ansicht" value={viewLabel} tone="cyan" />
+                <WorkspaceStatCard label="Tage im Fokus" value={visibleDays.length} tone="amber" />
+                <WorkspaceStatCard label="Quellen" value={calendarSources.length + 1} tone="slate" />
+              </WorkspaceStatGrid>
+            }
+          />
+
           <div className="grid gap-4">
-            <section className="rounded-[28px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] md:p-6">
+            <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
               <div className="flex flex-col gap-4 border-b border-white/8 pb-5 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Kalender</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">{headerLabel}</h2>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Ansicht</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-white">Navigation und Darstellung</h3>
                   <p className="mt-2 max-w-2xl text-sm text-slate-400">
                     Tag-, 7-Tage- und Monatsansicht in einer ruhigen, iOS-inspirierten Kalenderdarstellung.
                   </p>
@@ -1703,8 +1721,8 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
               </div>
             </section>
           </div>
-        </section>
-      </div>
+        </div>
+      </WorkspaceShell>
 
       {selectedEvent ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/70 p-4 backdrop-blur-sm">
@@ -1989,6 +2007,6 @@ export function CalendarTool({ events, users, calendarSources }: Props) {
           </div>
         </div>
       ) : null}
-    </main>
+    </>
   );
 }

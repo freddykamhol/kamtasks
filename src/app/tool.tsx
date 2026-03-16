@@ -3,7 +3,12 @@
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AppSidebar } from "@/components/app-sidebar";
+import {
+  WorkspaceHero,
+  WorkspaceShell,
+  WorkspaceStatCard,
+  WorkspaceStatGrid,
+} from "@/components/workspace-shell";
 import type { CalendarSource, Event, Task, User } from "@/generated/prisma/client";
 import { Quadrant, TaskStatus } from "@/generated/prisma/enums";
 import { getStableTaskColor } from "@/lib/gantt-colors";
@@ -158,6 +163,8 @@ export function EisenhowerTool({
       .sort((left, right) => new Date(left.startAt).getTime() - new Date(right.startAt).getTime());
   }, [allEvents]);
 
+  const openTaskCount = tasks.filter((task) => task.status === TaskStatus.OPEN).length;
+
   const selectedEvent = useMemo(
     () => allEvents.find((event) => event.id === selectedEventId) ?? null,
     [allEvents, selectedEventId]
@@ -256,13 +263,24 @@ export function EisenhowerTool({
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,_#0b1020_0%,_#060912_100%)] pb-28 text-slate-100 lg:pb-0">
-      <div className="mx-auto flex min-h-screen max-w-[1800px] min-w-0 flex-col px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
-        <AppSidebar activeKey="dashboard" />
+    <>
+      <WorkspaceShell activeKey="dashboard">
+        <div className="grid gap-4">
+          <WorkspaceHero
+            eyebrow="Dashboard"
+            title="Operations auf einen Blick"
+            description="Aufgaben, Tagesplan und heutige Termine laufen in einem ruhigen Cockpit zusammen. So wird aus Listenarbeit eine verkaufsfähige Steuerzentrale."
+            meta={
+              <WorkspaceStatGrid>
+                <WorkspaceStatCard label="Offen" value={openTaskCount} tone="cyan" />
+                <WorkspaceStatCard label="Heute im Gantt" value={todayPlan.length} tone="amber" />
+                <WorkspaceStatCard label="Termine heute" value={todayEvents.length} tone="slate" />
+              </WorkspaceStatGrid>
+            }
+          />
 
-        <section className="mt-4 min-w-0 flex-1 lg:mt-0 lg:pl-6">
           <div className="grid gap-4">
-            <div className="rounded-[28px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:p-5 md:p-6">
+            <div className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] sm:p-5 md:p-6">
               <div className="border-b border-white/8 pb-4 sm:pb-5">
                 <p className="text-xs uppercase tracking-[0.35em] text-slate-500 sm:text-sm">
                   Aufgaben anlegen
@@ -638,9 +656,9 @@ export function EisenhowerTool({
               </section>
 
             </div>
-          </div>
-        </section>
-      </div>
+        </div>
+        </div>
+      </WorkspaceShell>
 
       {selectedEvent ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#020617]/72 p-3 backdrop-blur-sm sm:p-4 md:items-center">
@@ -697,6 +715,6 @@ export function EisenhowerTool({
           </div>
         </div>
       ) : null}
-    </main>
+    </>
   );
 }

@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { AppSidebar } from "@/components/app-sidebar";
+import {
+  WorkspaceHero,
+  WorkspaceShell,
+  WorkspaceStatCard,
+  WorkspaceStatGrid,
+} from "@/components/workspace-shell";
 import type { Event, Task, User } from "@/generated/prisma/client";
 import { Quadrant } from "@/generated/prisma/enums";
 import { getStableTaskColor } from "@/lib/gantt-colors";
@@ -378,23 +383,29 @@ export function GanttTool({ tasks }: Props) {
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,_#0b1020_0%,_#060912_100%)] pb-28 text-slate-100 lg:pb-0">
-      <div className="mx-auto flex min-h-screen max-w-[1800px] flex-col px-4 py-4 lg:flex-row lg:px-6 lg:py-6">
-        <AppSidebar activeKey="gantt" />
+    <WorkspaceShell activeKey="gantt">
+      <div className="grid gap-4">
+        <WorkspaceHero
+          eyebrow="Gantt"
+          title={`Tagesplanung für ${formatDate(planningDate)}`}
+          description="Ziehe Aufgaben direkt aus der Matrix in den Tag, justiere sie im Viertelstundenraster und exportiere den Plan in einem durchgängigen Stil."
+          meta={
+            <WorkspaceStatGrid>
+              <WorkspaceStatCard label="Geplant" value={scheduledCount} tone="cyan" />
+              <WorkspaceStatCard label="Wartet" value={unscheduledCount} tone="amber" />
+              <WorkspaceStatCard label="Zeitfenster" value={`${hourCount}h`} tone="slate" />
+            </WorkspaceStatGrid>
+          }
+        />
 
-        <section className="mt-4 min-w-0 flex-1 lg:mt-0 lg:pl-6">
-          <div className="grid gap-4">
-            <section className="rounded-[20px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] md:p-5">
+        <div className="grid gap-4">
+          <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,_rgba(12,19,36,0.96)_0%,_rgba(8,14,27,0.98)_100%)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
               <div className="flex flex-col gap-4 border-b border-white/8 pb-4 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                    Gantt
-                  </p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">
-                    Tagesplanung
-                  </h2>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Steuerung</p>
+                  <h3 className="mt-2 text-xl font-semibold text-white">Raster, Auto-Plan und Export</h3>
                   <p className="mt-2 max-w-xl text-sm text-slate-400">
-                    Aufgaben aus den Eisenhower-Feldern in den Plan ziehen. Doppelklick auf einen Block entfernt ihn aus dem Gantt.
+                    Aufgaben aus den Eisenhower-Feldern in den Plan ziehen. Doppelklick auf einen Block entfernt ihn wieder aus dem Gantt.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400 md:gap-4">
                     <span>{scheduledCount} geplant</span>
@@ -450,7 +461,7 @@ export function GanttTool({ tasks }: Props) {
               <div className="mt-4 space-y-3 md:hidden">
                 {scheduledTasks.length === 0 ? (
                   <div className="rounded-[16px] border border-dashed border-white/10 bg-[#09101f] px-4 py-6 text-sm text-slate-500">
-                    Noch kein geplanter Block fuer diesen Tag.
+                    Noch kein geplanter Block für diesen Tag.
                   </div>
                 ) : (
                   scheduledTasks.map((task) => (
@@ -690,7 +701,7 @@ export function GanttTool({ tasks }: Props) {
               </div>
             </section>
 
-            <section className="rounded-[20px] border border-white/10 bg-[#0c1324] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] md:p-5">
+            <section className="rounded-[30px] border border-white/10 bg-[#0c1324] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.34)] md:p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
@@ -751,9 +762,8 @@ export function GanttTool({ tasks }: Props) {
                 })}
               </div>
             </section>
-          </div>
-        </section>
+        </div>
       </div>
-    </main>
+    </WorkspaceShell>
   );
 }

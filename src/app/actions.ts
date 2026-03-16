@@ -136,6 +136,7 @@ function formatLocalDateKey(value: Date) {
 
 function refreshHome() {
   revalidatePath("/");
+  revalidatePath("/tasks");
   revalidatePath("/gantt");
   revalidatePath("/calendar");
   revalidatePath("/api/calendar/feed");
@@ -298,6 +299,18 @@ export async function toggleTaskAction(taskId: string) {
     data: {
       status: task.status === TaskStatus.DONE ? TaskStatus.OPEN : TaskStatus.DONE,
     },
+  });
+
+  refreshHome();
+}
+
+export async function deleteTaskAction(taskId: string) {
+  if (!taskId) {
+    return;
+  }
+
+  await prisma.task.delete({
+    where: { id: taskId },
   });
 
   refreshHome();

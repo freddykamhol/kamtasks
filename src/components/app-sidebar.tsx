@@ -5,13 +5,14 @@ import { useEffect, useState } from "react";
 
 const navigationItems = [
   { label: "Dashboard", href: "/", key: "dashboard" },
-  { label: "Aufgaben", href: "/", key: "tasks" },
+  { label: "Aufgaben", href: "/tasks", key: "tasks" },
   { label: "Gantt", href: "/gantt", key: "gantt" },
   { label: "Kalender", href: "/calendar", key: "calendar" },
   { label: "Einstellungen", href: "/", key: "settings" },
 ] as const;
 
 type SidebarKey = (typeof navigationItems)[number]["key"];
+export type { SidebarKey };
 
 function GridIcon() {
   return (
